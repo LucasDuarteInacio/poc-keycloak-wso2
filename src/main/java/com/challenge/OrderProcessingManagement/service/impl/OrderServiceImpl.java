@@ -1,15 +1,15 @@
 package com.challenge.OrderProcessingManagement.service.impl;
 
-import com.challenge.OrderProcessingManagement.api.model.Order;
-import com.challenge.OrderProcessingManagement.api.model.OrderInput;
-import com.challenge.OrderProcessingManagement.api.model.OrderItemInput;
-import com.challenge.OrderProcessingManagement.api.model.UpdateOrderStatus;
 import com.challenge.OrderProcessingManagement.enums.OrderStatusEnum;
 import com.challenge.OrderProcessingManagement.exception.ResourceNotFoundException;
 import com.challenge.OrderProcessingManagement.mapper.OrderMapper;
-import com.challenge.OrderProcessingManagement.model.OrderItemModel;
-import com.challenge.OrderProcessingManagement.model.OrderModel;
-import com.challenge.OrderProcessingManagement.model.ProductModel;
+import com.challenge.OrderProcessingManagement.model.Order;
+import com.challenge.OrderProcessingManagement.model.OrderInput;
+import com.challenge.OrderProcessingManagement.model.OrderItemInput;
+import com.challenge.OrderProcessingManagement.model.UpdateOrderStatus;
+import com.challenge.OrderProcessingManagement.model.entity.OrderItemModel;
+import com.challenge.OrderProcessingManagement.model.entity.OrderModel;
+import com.challenge.OrderProcessingManagement.model.entity.ProductModel;
 import com.challenge.OrderProcessingManagement.repository.CustomerRepository;
 import com.challenge.OrderProcessingManagement.repository.OrderRepository;
 import com.challenge.OrderProcessingManagement.repository.ProductRepository;

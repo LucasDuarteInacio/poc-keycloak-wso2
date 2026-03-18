@@ -1,7 +1,8 @@
 package com.challenge.OrderProcessingManagement.controller;
 
-import com.challenge.OrderProcessingManagement.api.model.Customer;
-import com.challenge.OrderProcessingManagement.api.model.CustomerInput;
+import com.challenge.OrderProcessingManagement.controller.impl.CustomersControllerImpl;
+import com.challenge.OrderProcessingManagement.model.CustomerInput;
+import com.challenge.OrderProcessingManagement.model.entity.Customer;
 import com.challenge.OrderProcessingManagement.service.CustomerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

@@ -1,9 +1,10 @@
 package com.challenge.OrderProcessingManagement.controller;
 
-import com.challenge.OrderProcessingManagement.api.model.Order;
-import com.challenge.OrderProcessingManagement.api.model.OrderInput;
-import com.challenge.OrderProcessingManagement.api.model.OrderItemInput;
-import com.challenge.OrderProcessingManagement.api.model.UpdateOrderStatus;
+import com.challenge.OrderProcessingManagement.controller.impl.OrdersControllerImpl;
+import com.challenge.OrderProcessingManagement.model.Order;
+import com.challenge.OrderProcessingManagement.model.OrderInput;
+import com.challenge.OrderProcessingManagement.model.OrderItemInput;
+import com.challenge.OrderProcessingManagement.model.UpdateOrderStatus;
 import com.challenge.OrderProcessingManagement.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

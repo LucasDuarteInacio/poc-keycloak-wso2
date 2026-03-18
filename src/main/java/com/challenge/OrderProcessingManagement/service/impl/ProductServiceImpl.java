@@ -1,10 +1,10 @@
 package com.challenge.OrderProcessingManagement.service.impl;
 
-import com.challenge.OrderProcessingManagement.api.model.Product;
-import com.challenge.OrderProcessingManagement.api.model.ProductInput;
 import com.challenge.OrderProcessingManagement.exception.ResourceNotFoundException;
 import com.challenge.OrderProcessingManagement.mapper.ProductMapper;
-import com.challenge.OrderProcessingManagement.model.ProductModel;
+import com.challenge.OrderProcessingManagement.model.Product;
+import com.challenge.OrderProcessingManagement.model.ProductInput;
+import com.challenge.OrderProcessingManagement.model.entity.ProductModel;
 import com.challenge.OrderProcessingManagement.repository.ProductRepository;
 import com.challenge.OrderProcessingManagement.service.ProductService;
 import lombok.RequiredArgsConstructor;

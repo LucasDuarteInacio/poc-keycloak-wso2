@@ -1,12 +1,13 @@
 package com.challenge.OrderProcessingManagement.mapper;
 
-import com.challenge.OrderProcessingManagement.api.model.Product;
-import com.challenge.OrderProcessingManagement.api.model.ProductInput;
-import com.challenge.OrderProcessingManagement.model.ProductModel;
+import java.util.List;
+
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import java.util.List;
+import com.challenge.OrderProcessingManagement.model.Product;
+import com.challenge.OrderProcessingManagement.model.ProductInput;
+import com.challenge.OrderProcessingManagement.model.entity.ProductModel;
 
 @Mapper(componentModel = "spring", uses = {BaseMapper.class})
 public interface ProductMapper {

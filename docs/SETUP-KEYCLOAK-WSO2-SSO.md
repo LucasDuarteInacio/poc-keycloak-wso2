@@ -350,6 +350,71 @@ O SSO está habilitado no realm. Após login em uma aplicação, a sessão é re
 
 ---
 
+---
+
+## 8. Proteção do Backend — Mediation Policy (Gateway Secret)
+
+O backend valida que toda requisição veio pelo WSO2 checando o header `X-Gateway-Secret`.
+Como o WSO2 não envia esse header por padrão, é preciso configurar uma **mediation policy** na API via Publisher.
+
+### 8.1 Criar o arquivo de sequência
+
+Crie localmente o arquivo `gateway-secret-in-sequence.xml`:
+
+```xml
+<sequence xmlns="http://ws.apache.org/ns/synapse" name="GatewaySecretInSequence">
+    <header name="X-Gateway-Secret"
+            value="change-this-in-production-use-env-var"
+            scope="transport"/>
+</sequence>
+```
+
+> O valor de `value` deve ser **idêntico** ao configurado em `wso2.gateway.validation.secret` no `application.yaml`.
+
+### 8.2 Adicionar a mediation policy no Publisher
+
+1. Acesse `https://localhost:9443/publisher`
+2. Abra a API `order-processing`
+3. No menu lateral clique em **Policies**
+4. Selecione a aba **Request**
+5. Arraste o componente **Add Header** da paleta para o fluxo, ou use a opção **Upload** de sequence
+6. Configure:
+   - **Header Name**: `X-Gateway-Secret`
+   - **Header Value**: `change-this-in-production-use-env-var`
+7. Clique em **Save** e depois **Deploy**
+
+### 8.3 Usar variável de ambiente em produção
+
+Nunca deixe o secret hardcoded. Use variável de ambiente no Spring Boot:
+
+```bash
+# Iniciar com variável de ambiente
+GATEWAY_SECRET=meu-secret-seguro ./mvnw spring-boot:run
+
+# Ou via docker / systemd
+export GATEWAY_SECRET=meu-secret-seguro
+```
+
+```yaml
+# application.yaml — referenciar a variável
+wso2:
+  gateway:
+    validation:
+      secret: ${GATEWAY_SECRET:change-this-in-production-use-env-var}
+```
+
+### 8.4 Desabilitar temporariamente (apenas dev)
+
+```yaml
+# application.yaml
+wso2:
+  gateway:
+    validation:
+      enabled: false
+```
+
+---
+
 ## Referências
 
 - [WSO2 APIM — Configure Keycloak Key Manager](https://apim.docs.wso2.com/en/latest/administer/key-managers/configure-keycloak-connector/)

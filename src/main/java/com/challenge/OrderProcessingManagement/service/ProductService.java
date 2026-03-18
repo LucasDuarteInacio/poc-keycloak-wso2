@@ -1,9 +1,9 @@
 package com.challenge.OrderProcessingManagement.service;
 
-import com.challenge.OrderProcessingManagement.api.model.Product;
-import com.challenge.OrderProcessingManagement.api.model.ProductInput;
-
 import java.util.List;
+
+import com.challenge.OrderProcessingManagement.model.Product;
+import com.challenge.OrderProcessingManagement.model.ProductInput;
 
 public interface ProductService {
     List<Product> findAllProducts();

@@ -22,6 +22,16 @@ server:
   servlet:
     context-path: /api
 
+# Validação de gateway WSO2
+# O WSO2 deve injetar o header configurado em "header-name" com o valor de "secret"
+# via mediation policy (In Sequence) no Publisher. Ver docs/SETUP-KEYCLOAK-WSO2-SSO.md
+wso2:
+  gateway:
+    validation:
+      enabled: true
+      header-name: X-Gateway-Secret
+      secret: ${GATEWAY_SECRET:change-this-in-production-use-env-var}
+
 springdoc:
   api-docs:
     path: /v3/api-docs

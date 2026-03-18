@@ -1,10 +1,10 @@
 package com.challenge.OrderProcessingManagement.service.impl;
 
-import com.challenge.OrderProcessingManagement.api.model.Customer;
-import com.challenge.OrderProcessingManagement.api.model.CustomerInput;
 import com.challenge.OrderProcessingManagement.exception.ResourceNotFoundException;
 import com.challenge.OrderProcessingManagement.mapper.CustomerMapper;
+import com.challenge.OrderProcessingManagement.model.CustomerInput;
 import com.challenge.OrderProcessingManagement.model.CustomerModel;
+import com.challenge.OrderProcessingManagement.model.entity.Customer;
 import com.challenge.OrderProcessingManagement.repository.CustomerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
