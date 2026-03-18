@@ -1,0 +1,172 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-clientes-table
+      author: system
+      changes:
+        - createTable:
+            tableName: clientes
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: nome
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: cpf
+                  type: VARCHAR(14)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: data_criacao
+                  type: TIMESTAMP
+
+  - changeSet:
+      id: 002-create-produtos-table
+      author: system
+      changes:
+        - createTable:
+            tableName: produtos
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: nome
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: descricao
+                  type: TEXT
+              - column:
+                  name: preco
+                  type: DECIMAL(10, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantidade_estoque
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: data_criacao
+                  type: TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  type: TIMESTAMP
+
+  - changeSet:
+      id: 003-create-pedidos-table
+      author: system
+      changes:
+        - createTable:
+            tableName: pedidos
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: cliente_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    references: clientes(id)
+                    foreignKeyName: fk_pedido_cliente
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: valor_total
+                  type: DECIMAL(10, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: data_criacao
+                  type: TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  type: TIMESTAMP
+        - createIndex:
+            tableName: pedidos
+            indexName: idx_pedido_cliente
+            columns:
+              - column:
+                  name: cliente_id
+
+  - changeSet:
+      id: 004-create-itens-pedido-table
+      author: system
+      changes:
+        - createTable:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: pedido_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    references: pedidos(id)
+                    foreignKeyName: fk_item_pedido
+                    deleteCascade: true
+              - column:
+                  name: produto_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    references: produtos(id)
+                    foreignKeyName: fk_item_produto
+              - column:
+                  name: quantidade
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: preco_unitario
+                  type: DECIMAL(10, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: subtotal
+                  type: DECIMAL(10, 2)
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: itens_pedido
+            indexName: idx_item_pedido
+            columns:
+              - column:
+                  name: pedido_id
+        - createIndex:
+            tableName: itens_pedido
+            indexName: idx_item_produto
+            columns:
+              - column:
+                  name: produto_id
+

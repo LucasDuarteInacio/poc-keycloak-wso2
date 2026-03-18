@@ -1,0 +1,462 @@
+openapi: 3.0.0
+info:
+  title: Order Processing Management API
+  description: REST API for order management. Protegida por OAuth2 (Keycloak). Grupos - user (read) e admin (read/write).
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: API base path
+
+paths:
+  /customers:
+    get:
+      summary: List all customers
+      operationId: getAllCustomers
+      security:
+        - keycloakOAuth2: [customers:read]
+      tags:
+        - Customers
+      responses:
+        '200':
+          description: Customer list returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+    post:
+      summary: Create new customer
+      operationId: createCustomer
+      security:
+        - keycloakOAuth2: [customers:write]
+      tags:
+        - Customers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+      responses:
+        '201':
+          description: Customer created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          description: Validation error
+
+  /customers/{id}:
+    get:
+      summary: Get customer by ID
+      operationId: getCustomerById
+      security:
+        - keycloakOAuth2: [customers:read]
+      tags:
+        - Customers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Customer found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '404':
+          description: Customer not found
+
+  /products:
+    get:
+      summary: List all products
+      operationId: getAllProducts
+      security:
+        - keycloakOAuth2: [products:read]
+      tags:
+        - Products
+      responses:
+        '200':
+          description: Product list returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+    post:
+      summary: Create new product
+      operationId: createProduct
+      security:
+        - keycloakOAuth2: [products:write]
+      tags:
+        - Products
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Validation error
+
+  /products/{id}:
+    get:
+      summary: Get product by ID
+      operationId: getProductById
+      security:
+        - keycloakOAuth2: [products:read]
+      tags:
+        - Products
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Product found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+    put:
+      summary: Update product
+      operationId: updateProduct
+      security:
+        - keycloakOAuth2: [products:write]
+      tags:
+        - Products
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+    delete:
+      summary: Delete product
+      operationId: deleteProduct
+      security:
+        - keycloakOAuth2: [products:write]
+      tags:
+        - Products
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Product deleted successfully
+        '404':
+          description: Product not found
+
+  /orders:
+    get:
+      summary: List all orders
+      operationId: getAllOrders
+      security:
+        - keycloakOAuth2: [orders:read]
+      tags:
+        - Orders
+      responses:
+        '200':
+          description: Order list returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+    post:
+      summary: Create new order
+      operationId: createOrder
+      security:
+        - keycloakOAuth2: [orders:write]
+      tags:
+        - Orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderInput'
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Validation error
+
+  /orders/{id}:
+    get:
+      summary: Get order by ID
+      operationId: getOrderById
+      security:
+        - keycloakOAuth2: [orders:read]
+      tags:
+        - Orders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+
+  /orders/customer/{customerId}:
+    get:
+      summary: List orders by customer
+      operationId: getOrdersByCustomer
+      security:
+        - keycloakOAuth2: [orders:read]
+      tags:
+        - Orders
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Customer orders list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+  /orders/{id}/status:
+    patch:
+      summary: Update order status
+      operationId: updateOrderStatus
+      security:
+        - keycloakOAuth2: [orders:write]
+      tags:
+        - Orders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatus'
+      responses:
+        '200':
+          description: Status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+
+components:
+  securitySchemes:
+    keycloakOAuth2:
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: /protocol/openid-connect/token
+          scopes:
+            customers:read: Leitura de clientes
+            customers:write: Criação/edição de clientes
+            products:read: Leitura de produtos
+            products:write: Criação/edição/exclusão de produtos
+            orders:read: Leitura de pedidos
+            orders:write: Criação/edição de pedidos
+  schemas:
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        cpf:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    CustomerInput:
+      type: object
+      required:
+        - name
+        - email
+        - cpf
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        cpf:
+          type: string
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: decimal
+        stockQuantity:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProductInput:
+      type: object
+      required:
+        - name
+        - price
+        - stockQuantity
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: decimal
+        stockQuantity:
+          type: integer
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        customerId:
+          type: integer
+        customerName:
+          type: string
+        status:
+          type: string
+          enum: [ PENDING, CONFIRMED, PREPARING, SHIPPED, DELIVERED, CANCELLED ]
+        totalAmount:
+          type: number
+          format: decimal
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+          format: decimal
+        subtotal:
+          type: number
+          format: decimal
+
+    OrderInput:
+      type: object
+      required:
+        - customerId
+        - items
+      properties:
+        customerId:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemInput'
+
+    OrderItemInput:
+      type: object
+      required:
+        - productId
+        - quantity
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+
+    UpdateOrderStatus:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ PENDING, CONFIRMED, PREPARING, SHIPPED, DELIVERED, CANCELLED ]

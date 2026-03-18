@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: order_processing_postgres
+    environment:
+      POSTGRES_DB: order_processing_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:20.0.5
+    container_name: order_processing_keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/order_processing_db
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: postgres
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    volumes:
+      - ./keycloak/realm:/opt/keycloak/data/import:ro
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  wso2am:
+    image: wso2/wso2am:4.5.0
+    container_name: order_processing_wso2
+    user: root
+    ports:
+      - "9443:9443"
+      - "8243:8243"
+      - "8280:8280"
+      - "9763:9763"
+    volumes:
+      - wso2_data:/home/wso2carbon/wso2am-4.5.0/repository
+      - ./config-wso2.toml:/home/wso2carbon/wso2am-4.5.0/repository/conf/deployment.toml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k https://localhost:9443/publisher || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 240s
+
+volumes:
+  postgres_data:
+  wso2_data:

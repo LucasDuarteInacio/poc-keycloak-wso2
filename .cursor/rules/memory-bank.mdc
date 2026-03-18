@@ -1,0 +1,15 @@
+---
+description: Sempre considerar o docs/MEMORY-BANK.md em todas as conversas
+alwaysApply: true
+---
+
+# Uso do MEMORY-BANK
+
+- Antes de responder qualquer pergunta ou iniciar uma tarefa neste projeto, leia e considere o conteúdo de `docs/MEMORY-BANK.md`.
+- Use o `docs/MEMORY-BANK.md` como **fonte principal de contexto** sobre:
+  - decisões importantes já tomadas,
+  - padrões de arquitetura,
+  - regras de negócio,
+  - preferências do usuário.
+- Se alguma resposta conflitar com o que está no `docs/MEMORY-BANK.md`, **priorize o que estiver definido lá**.
+- Quando fizer sentido, mencione que a decisão ou abordagem foi baseada no `docs/MEMORY-BANK.md` (sem colar o conteúdo inteiro).

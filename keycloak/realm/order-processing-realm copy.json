@@ -1,0 +1,109 @@
+{
+  "realm": "order-processing",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "defaultSignatureAlgorithm": "RS256",
+  "roles": {
+    "realm": [
+      { "name": "customers:read", "description": "Leitura de clientes" },
+      { "name": "customers:write", "description": "Criação/edição de clientes" },
+      { "name": "products:read", "description": "Leitura de produtos" },
+      { "name": "products:write", "description": "Criação/edição/exclusão de produtos" },
+      { "name": "orders:read", "description": "Leitura de pedidos" },
+      { "name": "orders:write", "description": "Criação/edição de pedidos" }
+    ]
+  },
+  "groups": [
+    {
+      "name": "user",
+      "path": "/user",
+      "realmRoles": ["customers:read", "products:read", "orders:read"],
+      "attributes": { "description": ["Usuário com permissões de leitura"] }
+    },
+    {
+      "name": "admin",
+      "path": "/admin",
+      "realmRoles": [
+        "customers:read", "customers:write",
+        "products:read", "products:write",
+        "orders:read", "orders:write"
+      ],
+      "attributes": { "description": ["Administrador com todas as permissões"] }
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "order-processing-scopes",
+      "description": "Scopes da API Order Processing",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm-roles-to-scope",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "scope",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": ["role_list", "profile", "email", "order-processing-scopes"],
+  "clients": [
+    {
+      "clientId": "wso2-key-manager",
+      "name": "WSO2 API Manager",
+      "description": "Cliente para integração WSO2 validar tokens Keycloak",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "wso2-key-manager-secret-change-in-production",
+      "redirectUris": ["https://localhost:9443/*", "https://localhost:8243/*"],
+      "webOrigins": ["https://localhost:9443", "https://localhost:8243"],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+      "defaultClientScopes": ["role_list", "profile", "email", "order-processing-scopes"]
+    },
+    {
+      "clientId": "order-processing-api",
+      "name": "Order Processing API",
+      "description": "Cliente da API Order Processing",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "order-api-secret-change-in-production",
+      "redirectUris": ["http://localhost:8080/*", "https://localhost:8243/*"],
+      "webOrigins": ["*"],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+      "defaultClientScopes": ["role_list", "profile", "email", "order-processing-scopes"]
+    }
+  ]
+}

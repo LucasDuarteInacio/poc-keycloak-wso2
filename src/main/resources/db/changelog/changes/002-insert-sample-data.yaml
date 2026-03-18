@@ -1,0 +1,630 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-insert-sample-clientes
+      author: system
+      changes:
+        - insert:
+            tableName: clientes
+            columns:
+              - column:
+                  name: nome
+                  value: João Silva
+              - column:
+                  name: email
+                  value: joao.silva@email.com
+              - column:
+                  name: cpf
+                  value: 123.456.789-00
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: clientes
+            columns:
+              - column:
+                  name: nome
+                  value: Maria Santos
+              - column:
+                  name: email
+                  value: maria.santos@email.com
+              - column:
+                  name: cpf
+                  value: 987.654.321-00
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: clientes
+            columns:
+              - column:
+                  name: nome
+                  value: Pedro Oliveira
+              - column:
+                  name: email
+                  value: pedro.oliveira@email.com
+              - column:
+                  name: cpf
+                  value: 111.222.333-44
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: clientes
+            columns:
+              - column:
+                  name: nome
+                  value: Ana Costa
+              - column:
+                  name: email
+                  value: ana.costa@email.com
+              - column:
+                  name: cpf
+                  value: 555.666.777-88
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: clientes
+            columns:
+              - column:
+                  name: nome
+                  value: Carlos Pereira
+              - column:
+                  name: email
+                  value: carlos.pereira@email.com
+              - column:
+                  name: cpf
+                  value: 999.888.777-66
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+
+  - changeSet:
+      id: 006-insert-sample-produtos
+      author: system
+      changes:
+        - insert:
+            tableName: produtos
+            columns:
+              - column:
+                  name: nome
+                  value: Notebook Dell Inspiron 15
+              - column:
+                  name: descricao
+                  value: Notebook Dell Inspiron 15 com processador Intel Core i5, 8GB RAM, SSD 256GB
+              - column:
+                  name: preco
+                  value: 3299.99
+              - column:
+                  name: quantidade_estoque
+                  value: 15
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: produtos
+            columns:
+              - column:
+                  name: nome
+                  value: Mouse Logitech MX Master 3
+              - column:
+                  name: descricao
+                  value: Mouse sem fio ergonômico com sensor de alta precisão
+              - column:
+                  name: preco
+                  value: 599.90
+              - column:
+                  name: quantidade_estoque
+                  value: 50
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: produtos
+            columns:
+              - column:
+                  name: nome
+                  value: Teclado Mecânico Keychron K2
+              - column:
+                  name: descricao
+                  value: Teclado mecânico sem fio com switches Gateron Brown
+              - column:
+                  name: preco
+                  value: 799.00
+              - column:
+                  name: quantidade_estoque
+                  value: 30
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: produtos
+            columns:
+              - column:
+                  name: nome
+                  value: Monitor LG UltraWide 29"
+              - column:
+                  name: descricao
+                  value: Monitor ultrawide Full HD IPS de 29 polegadas
+              - column:
+                  name: preco
+                  value: 1499.00
+              - column:
+                  name: quantidade_estoque
+                  value: 20
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: produtos
+            columns:
+              - column:
+                  name: nome
+                  value: Webcam Logitech C920
+              - column:
+                  name: descricao
+                  value: Webcam Full HD 1080p com microfone estéreo integrado
+              - column:
+                  name: preco
+                  value: 449.90
+              - column:
+                  name: quantidade_estoque
+                  value: 40
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: produtos
+            columns:
+              - column:
+                  name: nome
+                  value: Headset HyperX Cloud II
+              - column:
+                  name: descricao
+                  value: Headset gamer com som surround 7.1 e microfone removível
+              - column:
+                  name: preco
+                  value: 699.90
+              - column:
+                  name: quantidade_estoque
+                  value: 25
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: produtos
+            columns:
+              - column:
+                  name: nome
+                  value: SSD Samsung 1TB NVMe
+              - column:
+                  name: descricao
+                  value: SSD interno NVMe M.2 de 1TB com velocidade de leitura até 3500MB/s
+              - column:
+                  name: preco
+                  value: 599.00
+              - column:
+                  name: quantidade_estoque
+                  value: 35
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: produtos
+            columns:
+              - column:
+                  name: nome
+                  value: Smartphone Samsung Galaxy S23
+              - column:
+                  name: descricao
+                  value: Smartphone Android com tela de 6.1", 128GB de armazenamento
+              - column:
+                  name: preco
+                  value: 3499.00
+              - column:
+                  name: quantidade_estoque
+                  value: 12
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+
+  - changeSet:
+      id: 007-insert-sample-pedidos
+      author: system
+      changes:
+        - insert:
+            tableName: pedidos
+            columns:
+              - column:
+                  name: cliente_id
+                  valueNumeric: 1
+              - column:
+                  name: status
+                  value: CONFIRMED
+              - column:
+                  name: valor_total
+                  value: 4047.70
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: pedidos
+            columns:
+              - column:
+                  name: cliente_id
+                  valueNumeric: 2
+              - column:
+                  name: status
+                  value: PREPARING
+              - column:
+                  name: valor_total
+                  value: 3899.89
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: pedidos
+            columns:
+              - column:
+                  name: cliente_id
+                  valueNumeric: 1
+              - column:
+                  name: status
+                  value: SHIPPED
+              - column:
+                  name: valor_total
+                  value: 1499.00
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: pedidos
+            columns:
+              - column:
+                  name: cliente_id
+                  valueNumeric: 3
+              - column:
+                  name: status
+                  value: PENDING
+              - column:
+                  name: valor_total
+                  value: 1048.90
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: pedidos
+            columns:
+              - column:
+                  name: cliente_id
+                  valueNumeric: 4
+              - column:
+                  name: status
+                  value: DELIVERED
+              - column:
+                  name: valor_total
+                  value: 3499.00
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: pedidos
+            columns:
+              - column:
+                  name: cliente_id
+                  valueNumeric: 5
+              - column:
+                  name: status
+                  value: CONFIRMED
+              - column:
+                  name: valor_total
+                  value: 1948.80
+              - column:
+                  name: data_criacao
+                  valueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: data_atualizacao
+                  valueComputed: CURRENT_TIMESTAMP
+
+  - changeSet:
+      id: 008-insert-sample-itens-pedido
+      author: system
+      changes:
+        # Itens do Pedido 1 (Cliente 1 - João Silva)
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 1
+              - column:
+                  name: produto_id
+                  valueNumeric: 2
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 599.90
+              - column:
+                  name: subtotal
+                  value: 599.90
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 1
+              - column:
+                  name: produto_id
+                  valueNumeric: 3
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 799.00
+              - column:
+                  name: subtotal
+                  value: 799.00
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 1
+              - column:
+                  name: produto_id
+                  valueNumeric: 4
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 1499.00
+              - column:
+                  name: subtotal
+                  value: 1499.00
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 1
+              - column:
+                  name: produto_id
+                  valueNumeric: 5
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 449.90
+              - column:
+                  name: subtotal
+                  value: 449.90
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 1
+              - column:
+                  name: produto_id
+                  valueNumeric: 6
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 699.90
+              - column:
+                  name: subtotal
+                  value: 699.90
+        # Itens do Pedido 2 (Cliente 2 - Maria Santos)
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 2
+              - column:
+                  name: produto_id
+                  valueNumeric: 1
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 3299.99
+              - column:
+                  name: subtotal
+                  value: 3299.99
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 2
+              - column:
+                  name: produto_id
+                  valueNumeric: 2
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 599.90
+              - column:
+                  name: subtotal
+                  value: 599.90
+        # Itens do Pedido 3 (Cliente 1 - João Silva)
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 3
+              - column:
+                  name: produto_id
+                  valueNumeric: 4
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 1499.00
+              - column:
+                  name: subtotal
+                  value: 1499.00
+        # Itens do Pedido 4 (Cliente 3 - Pedro Oliveira)
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 4
+              - column:
+                  name: produto_id
+                  valueNumeric: 5
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 449.90
+              - column:
+                  name: subtotal
+                  value: 449.90
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 4
+              - column:
+                  name: produto_id
+                  valueNumeric: 7
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 599.00
+              - column:
+                  name: subtotal
+                  value: 599.00
+        # Itens do Pedido 5 (Cliente 4 - Ana Costa)
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 5
+              - column:
+                  name: produto_id
+                  valueNumeric: 8
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 3499.00
+              - column:
+                  name: subtotal
+                  value: 3499.00
+        # Itens do Pedido 6 (Cliente 5 - Carlos Pereira)
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 6
+              - column:
+                  name: produto_id
+                  valueNumeric: 3
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 799.00
+              - column:
+                  name: subtotal
+                  value: 799.00
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 6
+              - column:
+                  name: produto_id
+                  valueNumeric: 6
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 699.90
+              - column:
+                  name: subtotal
+                  value: 699.90
+        - insert:
+            tableName: itens_pedido
+            columns:
+              - column:
+                  name: pedido_id
+                  valueNumeric: 6
+              - column:
+                  name: produto_id
+                  valueNumeric: 5
+              - column:
+                  name: quantidade
+                  valueNumeric: 1
+              - column:
+                  name: preco_unitario
+                  value: 449.90
+              - column:
+                  name: subtotal
+                  value: 449.90
+
