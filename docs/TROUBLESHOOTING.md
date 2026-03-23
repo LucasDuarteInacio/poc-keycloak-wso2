@@ -15,6 +15,7 @@
 7. [403 via WSO2 — Duplicate scope claim](#7-403-forbidden-na-chamada-via-wso2--duplicate-scope-claim)
 8. [No Gateway Environments Configured](#8-no-gateway-environments-configured)
 9. [Fluxo de Diagnóstico](#9-fluxo-de-diagnóstico)
+10. [`900908` — Subscription validation failed](#10-900908--subscription-validation-failed)
 
 ---
 
@@ -444,13 +445,42 @@ Erro ao CHAMAR a API via WSO2 Gateway
           │           └─► iss correto mas ainda 401? → Token expirado ou API não publicada
           │
           └─► HTTP 403?
-                  └─► Verificar claim "scope" no token: é string ou array?
+                  ├─► Corpo JSON code 900908 + "API Subscription validation failed"?
+                  │       └─► Consumer Key do JWT (azp) sem subscrição na API
+                  │           → Login pelo portal (order-processing-api) ou inscrever o client do módulo no WSO2
+                  │           (ver seção 10)
+                  └─► Caso contrário: verificar claim "scope" no token: é string ou array?
                       ├─► scope duplicado (string + array)? → Duplicate claim
                       │       Renomear claim.name do mapper: scope → roles
                       │       + Scopes Claim URI no Key Manager: scope → roles
                       │       (ver seção 7)
                       └─► scope OK mas ainda 403? → Scope não configurado no recurso da API no Publisher
 ```
+
+---
+
+## 10. `900908` — Subscription validation failed
+
+### Sintoma
+
+Resposta JSON do gateway HTTP (ex.: 403):
+
+```json
+{
+  "code": "900908",
+  "message": "Resource forbidden",
+  "description": "User is NOT authorized to access the Resource. API Subscription validation failed."
+}
+```
+
+### Causa
+
+O WSO2 associa o acesso à API à **subscrição** de uma aplicação no Developer Portal. O **Consumer Key** extraído do JWT (com Keycloak, em geral o claim **`azp`**) precisa ser o de uma aplicação **inscrita** nessa API. No guia de setup, a aplicação configurada com "Provide Existing OAuth Keys" usa o client **`order-processing-api`**. Um token emitido para **`orders-module`** (ou outro `*-module`) tem **`azp`** diferente; se não existir outra aplicação WSO2 com esse consumer key inscrito na API, a validação de subscrição falha com `900908`.
+
+### Solução
+
+- **Recomendado (frontend deste repo):** faça login pelo **portal** (`order-processing-api`) antes de abrir módulos. O app armazena o token desse client só para chamadas ao gateway e mantém o token enxuto do módulo para a sessão na UI. Se você só entrou por atalho de módulo ou migrou de versão antiga, **saia e entre de novo pelo portal** para preencher o token de API.
+- **Alternativa:** no Developer Portal, registre cada client `orders-module`, `products-module`, `customers-module` com "Provide Existing OAuth Keys" (mesmos Key/Secret do Keycloak) e **subscreva** cada um à API Order Processing.
 
 ---
 

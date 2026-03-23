@@ -1,6 +1,6 @@
 ---
 description: Sempre considerar o docs/MEMORY-BANK.md em todas as conversas
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Uso do MEMORY-BANK

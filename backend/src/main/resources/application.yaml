@@ -28,7 +28,7 @@ server:
 wso2:
   gateway:
     validation:
-      enabled: true
+      enabled: false
       header-name: X-Gateway-Secret
       secret: ${GATEWAY_SECRET:change-this-in-production-use-env-var}
 

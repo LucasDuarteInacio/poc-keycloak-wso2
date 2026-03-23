@@ -1,0 +1,36 @@
+// Bootstrap
+@use "bootstrap/scss/bootstrap";
+
+// Global
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #f8f9fa;
+  margin: 0;
+}
+
+// Utilitários extras
+.badge {
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+.table > :not(caption) > * > * {
+  padding: 0.75rem 1rem;
+}
+
+.card {
+  border-radius: 0.75rem;
+  border: 1px solid #e9ecef;
+}
+
+.btn {
+  border-radius: 0.5rem;
+}
+
+.form-control, .form-select {
+  border-radius: 0.5rem;
+}

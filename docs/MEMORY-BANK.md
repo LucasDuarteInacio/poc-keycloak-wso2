@@ -23,8 +23,10 @@ OrderProcessingManagement/
 ├── docker-compose.yml                          # Infraestrutura: Postgres, Keycloak, WSO2
 ├── config-wso2.toml                            # deployment.toml do WSO2
 ├── keycloak/
-│   └── realm/
-│       └── order-processing-realm.json         # Realm importado automaticamente
+│   ├── realm/
+│   │   └── order-processing-realm.json         # Referência de configuração (realm/clients criados pela UI — ver SETUP §2)
+│   └── scripts/
+│       └── configure-module-clients.sh         # (Opcional) Scope mappings via Admin API — ver SETUP §2.7 (UI)
 ├── postgres/
 │   └── init/
 │       └── 01-wso2-databases.sql               # Cria WSO2AM_DB e WSO2SHARED_DB no Postgres
@@ -59,7 +61,7 @@ OrderProcessingManagement/
 | WSO2 APIM | `WSO2CARBON_DB` (local)| Dentro do container (H2 — efêmero) |
 
 > **Regra**: nunca usar `docker compose down -v`. Usar sempre `docker compose down` para preservar o volume `postgres_data`.  
-> Para reset total + reimport do Keycloak: `docker compose down -v && docker compose up -d` (perde tudo inclusive config manual do WSO2).
+> Para reset total (Keycloak/WSO2 no volume): `docker compose down -v && docker compose up -d` (perde tudo inclusive config manual do WSO2). Depois recrie o realm na UI (SETUP §2).
 
 O script `postgres/init/01-wso2-databases.sql` é executado automaticamente pelo PostgreSQL **apenas na primeira inicialização** do container (quando o volume não existe ainda).
 
@@ -94,9 +96,14 @@ orders:read      orders:write
 | clientId               | Tipo         | Secret                                         | Uso                                        |
 |------------------------|--------------|------------------------------------------------|--------------------------------------------|
 | `wso2-key-manager`     | Confidential | `wso2-key-manager-secret-change-in-production` | WSO2 gerenciar tokens (service account)    |
-| `order-processing-api` | Confidential | `order-api-secret-change-in-production`        | Consumo da API / testes diretos            |
+| `order-processing-api` | Confidential | `order-api-secret-change-in-production`        | Consumo da API / testes diretos (token completo) |
+| `orders-module`        | Confidential | `orders-module-secret-change-in-production`    | Frontend modular — token apenas com orders:* |
+| `products-module`      | Confidential | `products-module-secret-change-in-production`  | Frontend modular — token apenas com products:* |
+| `customers-module`     | Confidential | `customers-module-secret-change-in-production` | Frontend modular — token apenas com customers:* |
 
-> **Atenção**: ambos os clientes são `publicClient: false`. O `client_secret` é **obrigatório** nas chamadas `grant_type=password`.
+> **Atenção**: todos os clientes são `publicClient: false`. O `client_secret` é **obrigatório** nas chamadas.
+>
+> **Módulos por client**: Os clientes `*-module` têm `fullScopeAllowed: false` e usam client scopes dedicados com scope mappings, limitando o token aos escopos do respectivo módulo. Configure os scope mappings **pela UI**: ver **docs/SETUP-KEYCLOAK-WSO2-SSO.md** § **2.7**. Alternativa: `keycloak/scripts/configure-module-clients.sh`.
 
 ### Client `wso2-key-manager` — configuração crítica
 
@@ -111,12 +118,20 @@ O `wso2-key-manager` precisa de:
    - Inclui roles do `realm-management` no access token → DCR API aceita o token
 4. **Service account roles** (`manage-clients`, `view-clients`, `query-clients` do client `realm-management`) — atribuídas via Admin API (não via UI do Keycloak 20.x)
 
-### Import automático do Realm
+### Arquitetura modular (token por client)
 
-- `command: start-dev --import-realm`
-- Volume: `./keycloak/realm:/opt/keycloak/data/import:ro`
-- O realm **não é reimportado** se já existir no banco (comportamento padrão do Keycloak 20.x)
-- Para reimportar: `docker compose down -v && docker compose up -d`
+Para evitar token grande quando o usuário tem muitas permissões, o frontend pode usar **um client por módulo**:
+- Cada módulo (Orders, Products, Customers) tem seu próprio client OAuth
+- O token inclui apenas os scopes daquele módulo
+- Ao trocar de módulo, o frontend faz novo login com o client do módulo (SSO evita nova senha)
+
+**Configuração na UI**: Configure os scope mappings dos client scopes `*-module-scopes` **pela UI do Keycloak** (passo a passo em **SETUP-KEYCLOAK-WSO2-SSO.md** § **2.7**). Opcionalmente: `bash keycloak/scripts/configure-module-clients.sh`.
+
+### Realm no Keycloak (somente UI no compose)
+
+- **Docker Compose**: Keycloak sobe com `start-dev` **sem** import automático; não há volume `keycloak/realm` montado.
+- **Configuração**: criar realm `order-processing`, roles, grupos, client scopes e clients **pela Admin UI** — ver **SETUP-KEYCLOAK-WSO2-SSO.md** § **2**. O JSON em `keycloak/realm/` permanece como **referência** (import manual na UI ou CLI, se desejar).
+- Reset total: `docker compose down -v && docker compose up -d`
 
 ### SSO
 
@@ -233,7 +248,7 @@ URL: `https://localhost:9443/admin` → Key Managers → **Add Key Manager**
 
 - [ ] Atualizar Key Manager no WSO2: `Scopes Claim URI = roles` e confirmar que o `iss` no token bate com `http://localhost:8081/realms/order-processing`
 - [ ] Testar "Provide Existing OAuth Keys" com `order-processing-api` no Developer Portal
-- [ ] Publicar a API no WSO2 Publisher com scopes por recurso (passo 4 do SETUP)
-- [ ] Criar usuários de teste nos grupos `user` e `admin` no Keycloak (passo 2)
+- [ ] Publicar a API no WSO2 Publisher com scopes por recurso (SETUP §5)
+- [ ] Criar usuários de teste nos grupos `user` e `admin` no Keycloak (SETUP §3)
 - [ ] Testar chamada à API via WSO2 gateway com token gerado via `http://keycloak:8081`
 - [ ] Validar fluxo completo: login → token → chamada protegida → scope enforcement
