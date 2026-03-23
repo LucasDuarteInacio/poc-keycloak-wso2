@@ -24,7 +24,7 @@ import { KeycloakService } from '../core/auth/keycloak.service';
         <div>
           <p class="mb-1">
             Você está no módulo <strong>{{ moduleLabel() }}</strong> com token restrito.
-            Para abrir outro módulo, use o menu lateral — a troca de client OAuth é feita automaticamente.
+            Para abrir outro módulo, use o menu lateral — o SSO refaz o login com outros client scopes no mesmo client.
           </p>
           @if (portalModScope()) {
             <p class="mb-0 small text-muted">

@@ -1,4 +1,40 @@
 services:
+  # Samba 4 como AD DC (laboratório). Keycloak: ldap://samba-ad:389, vendor Active Directory,
+  # Bind DN CN=Administrator,CN=Users,DC=lab,DC=order,DC=local, Users DN CN=Users,DC=lab,DC=order,DC=local.
+  # INSECURELDAP=true só para dev (LDAP simples). Primeira subida provisiona o domínio (pode levar 1–2 min).
+  # Em Mac Apple Silicon a imagem é amd64; platform abaixo evita o warning e força emulação (pode ser mais lento).
+  samba-ad:
+    image: nowsci/samba-domain:latest
+    platform: linux/amd64
+    container_name: order_processing_samba_ad
+    hostname: dc1
+    privileged: true
+    environment:
+      DOMAIN: LAB.ORDER.LOCAL
+      DOMAINPASS: "${SAMBA_DOMAIN_PASSWORD:-LabAdmin!ChangeMe}"
+      DOMAIN_DC: dc=lab,dc=order,dc=local
+      DOMAIN_EMAIL: order.local
+      NOCOMPLEXITY: "true"
+      INSECURELDAP: "true"
+      DNSFORWARDER: 8.8.8.8
+      JOIN: "false"
+    volumes:
+      - samba_ad_data:/var/lib/samba
+      - samba_ad_config:/etc/samba/external
+    ports:
+      - "1389:389"
+      - "1636:636"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "ldapsearch -x -H ldap://127.0.0.1 -b '' -s base '(objectClass=*)' namingContexts >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 180s
+
   postgres:
     image: postgres:15-alpine
     container_name: order_processing_postgres
@@ -28,6 +64,8 @@ services:
       KC_DB_PASSWORD: postgres
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
     volumes:
@@ -37,6 +75,47 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  # Aplica sslRequired=NONE em master e order-processing (HTTP em dev). O realm master não vem do JSON;
+  # sem isto /admin/ pode mostrar "HTTPS required" mesmo em http://localhost:8081.
+  keycloak-ssl-init:
+    image: quay.io/keycloak/keycloak:20.0.5
+    container_name: order_processing_keycloak_ssl_init
+    network_mode: service:keycloak
+    depends_on:
+      keycloak:
+        condition: service_started
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    entrypoint: ["/bin/bash", "-lc"]
+    command:
+      - |
+        set -e
+        echo "keycloak-ssl-init: aguardando Keycloak em 127.0.0.1:8080..."
+        i=0
+        while [ "$$i" -lt 90 ]; do
+          i=$$((i+1))
+          if curl -sf -o /dev/null "http://127.0.0.1:8080/realms/master"; then
+            echo "keycloak-ssl-init: Keycloak respondeu (tentativa $$i)"
+            break
+          fi
+          sleep 2
+        done
+        if ! curl -sf -o /dev/null "http://127.0.0.1:8080/realms/master"; then
+          echo "keycloak-ssl-init: ERRO — Keycloak não respondeu a tempo."
+          exit 1
+        fi
+        sleep 4
+        /opt/keycloak/bin/kcadm.sh config credentials \
+          --server http://127.0.0.1:8080 --realm master \
+          --user "$$KEYCLOAK_ADMIN" --password "$$KEYCLOAK_ADMIN_PASSWORD"
+        /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE
+        if /opt/keycloak/bin/kcadm.sh get realms/order-processing >/dev/null 2>&1; then
+          /opt/keycloak/bin/kcadm.sh update realms/order-processing -s sslRequired=NONE
+        fi
+        echo "keycloak-ssl-init: sslRequired=NONE aplicado (master e order-processing se existir)."
+    restart: "no"
 
   wso2am:
     image: wso2/wso2am:4.5.0
@@ -67,3 +146,5 @@ services:
 volumes:
   postgres_data:
   wso2_data:
+  samba_ad_data:
+  samba_ad_config:

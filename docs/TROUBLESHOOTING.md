@@ -16,6 +16,7 @@
 8. [No Gateway Environments Configured](#8-no-gateway-environments-configured)
 9. [Fluxo de Diagnóstico](#9-fluxo-de-diagnóstico)
 10. [`900908` — Subscription validation failed](#10-900908--subscription-validation-failed)
+11. [Keycloak — HTTPS required (HTTP em dev)](#11-keycloak--https-required-http-em-dev)
 
 ---
 
@@ -475,12 +476,37 @@ Resposta JSON do gateway HTTP (ex.: 403):
 
 ### Causa
 
-O WSO2 associa o acesso à API à **subscrição** de uma aplicação no Developer Portal. O **Consumer Key** extraído do JWT (com Keycloak, em geral o claim **`azp`**) precisa ser o de uma aplicação **inscrita** nessa API. No guia de setup, a aplicação configurada com "Provide Existing OAuth Keys" usa o client **`order-processing-api`**. Um token emitido para **`orders-module`** (ou outro `*-module`) tem **`azp`** diferente; se não existir outra aplicação WSO2 com esse consumer key inscrito na API, a validação de subscrição falha com `900908`.
+O WSO2 associa o acesso à API à **subscrição** de uma aplicação no Developer Portal. O **Consumer Key** no JWT (claim **`azp`** com Keycloak) tem de corresponder a uma aplicação **inscrita** nessa API. A SPA usa o client **`order-processing-portal`** para portal e módulos (só mudam os **scopes** do token); a subscrição no Developer Portal deve usar esse **Consumer Key** (sem secret no fluxo público + PKCE) ou, em cenários de teste, **`order-processing-api`** conforme o guia.
 
 ### Solução
 
-- **Recomendado (frontend deste repo):** faça login pelo **portal** (`order-processing-api`) antes de abrir módulos. O app armazena o token desse client só para chamadas ao gateway e mantém o token enxuto do módulo para a sessão na UI. Se você só entrou por atalho de módulo ou migrou de versão antiga, **saia e entre de novo pelo portal** para preencher o token de API.
-- **Alternativa:** no Developer Portal, registre cada client `orders-module`, `products-module`, `customers-module` com "Provide Existing OAuth Keys" (mesmos Key/Secret do Keycloak) e **subscreva** cada um à API Order Processing.
+- **Frontend atual:** inscreva a API Order Processing numa aplicação cujo **Consumer Key** = **`order-processing-portal`** (Provide Existing OAuth Keys / client público no Keycloak). Assim, o token enxuto do módulo (`orders-module-scopes`, etc.) continua com **`azp`** = `order-processing-portal` e passa na validação de subscrição.
+- Se ainda usa o modelo antigo com clients `*-module` no Keycloak, cada um precisa de aplicação + subscrição correspondente no WSO2, ou migre para o client único acima.
+
+---
+
+## 11. Keycloak — HTTPS required (HTTP em dev)
+
+### Sintoma
+
+Ao abrir **http://localhost:8081** (ou outro URL em **HTTP**), o Keycloak responde com **HTTPS required** / **We are sorry…** no fluxo de login (em especial na **Admin Console**, realm **`master`**).
+
+### Causa
+
+O realm tem **Require SSL** = **External requests** ou **All requests**. Pedidos feitos por **HTTP** a partir de um host que o Keycloak trata como “externo” (por exemplo **IP da LAN** em vez de `localhost`) são recusados. O realm **`master`** não vem do JSON do projeto — mantém o padrão até alterar na UI ou via API.
+
+### Solução
+
+1. Com o compose do projeto, suba os serviços e deixe o one-shot **`keycloak-ssl-init`** concluir (`docker compose logs keycloak-ssl-init`). Só então abra **http://localhost:8081/admin/** (ou atualize a página).
+2. Use **http://localhost:8081** no browser (evite só o IP da máquina na rede, em dev).
+3. **Realm settings** → **Login** → **Require SSL** → **`None`** no realm **`master`** e no **`order-processing`**.
+4. **Base já criada:** o import `order-processing-realm.json` só aplica `sslRequired: none` em **novas** importações. Para corrigir sem UI, com o container no ar:
+
+```bash
+docker exec order_processing_keycloak bash -s < keycloak/scripts/disable-ssl-required-dev.sh
+```
+
+Ou veja o bloco equivalente em **docs/SETUP-KEYCLOAK-WSO2-SSO.md** § **1.1**.
 
 ---
 

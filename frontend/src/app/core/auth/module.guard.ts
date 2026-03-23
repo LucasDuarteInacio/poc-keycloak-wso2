@@ -3,10 +3,9 @@ import { CanActivateFn, Router, ActivatedRouteSnapshot } from '@angular/router';
 import { KeycloakService } from './keycloak.service';
 
 /**
- * Guard que verifica se o token atual é do módulo correto para a rota.
- * Portal (`order-processing-api`): ao entrar em /customers, /products ou /orders,
- * inicia novo fluxo OAuth com o client do módulo (SSO, token menor).
- * Entre módulos distintos: mesma troca de client.
+ * Guard que verifica se a sessão (contexto portal vs módulo) bate com a rota.
+ * Ao entrar num módulo a partir do portal (ou trocar de módulo), inicia novo fluxo OAuth
+ * com o mesmo client e **client scopes** distintos (token enxuto por escopo).
  */
 export const moduleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const keycloak = inject(KeycloakService);

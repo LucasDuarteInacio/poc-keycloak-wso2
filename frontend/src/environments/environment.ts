@@ -1,10 +1,10 @@
-/** Configuração de um cliente OAuth por módulo (token enxuto por escopo) */
-export interface ModuleClient {
-  clientId: string;
-  clientSecret: string;
+/** Metadados de módulo + nomes dos client scopes Keycloak solicitados no login */
+export interface ModuleConfig {
   label: string;
   route: string;
   roles: string[];
+  /** Client scopes opcionais (ex.: orders-module-scopes) — controlam claims do token */
+  oauthScopes: string[];
 }
 
 export const environment = {
@@ -13,12 +13,14 @@ export const environment = {
   keycloak: {
     url: 'http://localhost:8081',
     realm: 'order-processing',
+    /** Único client público da SPA (PKCE). Escopos finos via client scopes opcionais no Keycloak. */
+    clientId: 'order-processing-portal',
+    /** Client scopes pedidos no login do portal (ex.: só mod:* no token) */
+    portalOAuthScopes: ['portal-module-scopes'],
     /**
      * Portal: token com escopos `mod:*` (quais módulos pode abrir).
      * Chamadas HTTP usam este token quando a sessão é do portal (subscrição WSO2 para este client).
      */
-    portalClientId: 'order-processing-portal',
-    portalClientSecret: 'order-processing-portal-secret-change-in-production',
     modulePortalScopes: {
       orders: 'mod:orders',
       products: 'mod:products',
@@ -26,26 +28,23 @@ export const environment = {
     } as Record<string, string>,
     moduleClients: {
       orders: {
-        clientId: 'orders-module',
-        clientSecret: 'orders-module-secret-change-in-production',
         label: 'Pedidos',
         route: '/orders',
         roles: ['orders:read'],
+        oauthScopes: ['orders-module-scopes'],
       },
       products: {
-        clientId: 'products-module',
-        clientSecret: 'products-module-secret-change-in-production',
         label: 'Produtos',
         route: '/products',
         roles: ['products:read'],
+        oauthScopes: ['products-module-scopes'],
       },
       customers: {
-        clientId: 'customers-module',
-        clientSecret: 'customers-module-secret-change-in-production',
         label: 'Clientes',
         route: '/customers',
         roles: ['customers:read'],
+        oauthScopes: ['customers-module-scopes'],
       },
-    } as Record<string, ModuleClient>,
+    } as Record<string, ModuleConfig>,
   },
 };

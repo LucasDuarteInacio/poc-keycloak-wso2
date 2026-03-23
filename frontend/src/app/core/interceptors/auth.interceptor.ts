@@ -6,8 +6,8 @@ import { KeycloakService } from '../auth/keycloak.service';
 import { environment } from '../../../environments/environment';
 
 /**
- * Sempre o Bearer do **client da sessão atual**: `order-processing-portal` no portal ou
- * `orders-module` / `products-module` / `customers-module` dentro do módulo.
+ * Bearer do token da sessão (portal ou módulo): um único client OAuth (`environment.keycloak.clientId`);
+ * o conteúdo do JWT varia conforme os client scopes pedidos no login.
  * No WSO2, inscreva cada um desses clients na API (Provide Existing OAuth Keys).
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {

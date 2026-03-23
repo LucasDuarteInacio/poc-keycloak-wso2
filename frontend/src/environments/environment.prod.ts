@@ -1,4 +1,4 @@
-import type { ModuleClient } from './environment';
+import type { ModuleConfig } from './environment';
 
 export const environment = {
   production: true,
@@ -6,8 +6,8 @@ export const environment = {
   keycloak: {
     url: 'http://localhost:8081',
     realm: 'order-processing',
-    portalClientId: 'order-processing-portal',
-    portalClientSecret: 'order-processing-portal-secret-change-in-production',
+    clientId: 'order-processing-portal',
+    portalOAuthScopes: ['portal-module-scopes'],
     modulePortalScopes: {
       orders: 'mod:orders',
       products: 'mod:products',
@@ -15,26 +15,23 @@ export const environment = {
     } as Record<string, string>,
     moduleClients: {
       orders: {
-        clientId: 'orders-module',
-        clientSecret: 'orders-module-secret-change-in-production',
         label: 'Pedidos',
         route: '/orders',
         roles: ['orders:read'],
+        oauthScopes: ['orders-module-scopes'],
       },
       products: {
-        clientId: 'products-module',
-        clientSecret: 'products-module-secret-change-in-production',
         label: 'Produtos',
         route: '/products',
         roles: ['products:read'],
+        oauthScopes: ['products-module-scopes'],
       },
       customers: {
-        clientId: 'customers-module',
-        clientSecret: 'customers-module-secret-change-in-production',
         label: 'Clientes',
         route: '/customers',
         roles: ['customers:read'],
+        oauthScopes: ['customers-module-scopes'],
       },
-    } as Record<string, ModuleClient>,
+    } as Record<string, ModuleConfig>,
   },
 };

@@ -4,7 +4,7 @@ Este guia descreve a configuração completa da integração Keycloak + WSO2 API
 
 ## Visão Geral
 
-- **Keycloak**: Identity Provider com realm `order-processing`, grupos `admin` e `user`, scopes das rotas
+- **Keycloak**: Identity Provider com realm `order-processing`, grupos `admin` e `user`, scopes das rotas; **opcionalmente** User Federation **LDAP** (Samba 4 AD de laboratório — **§ 10**)
 - **WSO2 API Manager**: API Gateway que valida tokens JWT emitidos pelo Keycloak
 - **Key Manager**: Tipo `Keycloak` com client `wso2-key-manager` (service account com roles de gerenciamento)
 
@@ -41,6 +41,36 @@ Este guia descreve a configuração completa da integração Keycloak + WSO2 API
 docker compose up -d
 ```
 
+> **URL do Keycloak no host:** use **http://localhost:8081** (mapeamento `8081:8080`). Textos que falam em porta **8080** referem-se ao **interior** do container.
+
+### 1.1 Require SSL em HTTP (evitar “HTTPS required”)
+
+Com **Require SSL** em **External requests** ou **All requests**, o login na **Admin Console** (realm **`master`**, URL **http://localhost:8081/admin/**) ou no realm da aplicação pode falhar com **HTTPS required** ao usar **HTTP**, sobretudo se abrir pelo **IP da LAN** (ex.: `http://192.168.x.x:8081`) em vez de **`localhost`**.
+
+O `docker-compose.yml` inclui o serviço one-shot **`keycloak-ssl-init`**, que partilha a rede do Keycloak e, após o servidor responder, define **`sslRequired=NONE`** nos realms **`master`** e **`order-processing`** via Admin CLI (`kcadm`). Em **`docker compose up -d`**, aguarde ~30–60 s e confira os logs: `docker compose logs keycloak-ssl-init` deve terminar com `sslRequired=NONE aplicado`. Se abrir **/admin/** antes disso, faça refresh após o init terminar.
+
+**Desenvolvimento local (ajuste manual, se precisar):**
+
+1. Prefira **http://localhost:8081** no browser.
+2. Realm **`master`**: **Realm settings** → **Login** → **Require SSL** → **`None`** → **Save**.
+3. Realm **`order-processing`**: o mesmo (ou recrie o realm a partir do JSON importado, que já vem com `sslRequired: none`).
+
+Se o realm **já existir** na base PostgreSQL, o ficheiro `keycloak/realm/order-processing-realm.json` **não** é reaplicado em cada `docker compose up`. Para forçar **sem abrir a UI**, com o container no ar:
+
+```bash
+docker exec order_processing_keycloak bash -c '
+/opt/keycloak/bin/kcadm.sh config credentials --server http://127.0.0.1:8080 --realm master --user admin --password admin
+/opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE
+/opt/keycloak/bin/kcadm.sh update realms/order-processing -s sslRequired=NONE 2>/dev/null || true
+'
+```
+
+(Altere `admin`/`admin` se mudou `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` no compose.)
+
+Equivalente: `docker exec order_processing_keycloak bash -s < keycloak/scripts/disable-ssl-required-dev.sh`
+
+Em **produção** use HTTPS real e **Require SSL** adequado — não use **`None`** exposto à Internet.
+
 ---
 
 ## 2. Criar o realm, client scopes e clients
@@ -56,7 +86,7 @@ Ajustes recomendados em **Realm settings** (aba **General** / **Login** / **Sess
 
 | Opção | Valor sugerido |
 |--------|----------------|
-| **Require SSL** | `External requests` (equivalente a `external`) |
+| **Require SSL** | **`None`** em dev com HTTP em `localhost` (ver **§ 1.1**). Em produção com HTTPS: **External requests** ou **All requests** |
 | **User registration** | OFF |
 | **Login with email** | ON |
 | **Forgot password** | ON (se desejar reset) |
@@ -132,20 +162,19 @@ Em **Realm settings** → **Client scopes** → aba **Default client scopes**, a
 
 ### 2.6 Clients OAuth
 
-Em **Clients** → **Create client** para cada linha da tabela. Todos são **confidential** (Client authentication = ON), protocolo **OpenID Connect**.
+> **SPA deste repositório:** há **um** client público (`order-processing-portal`, PKCE, sem secret no browser). Portal vs módulos usam **client scopes opcionais** e o parâmetro **`scope`** no `/auth` — não crie clients `orders-module` / `products-module` / `customers-module` a menos que queira o modelo antigo.
+
+Em **Clients** → **Create client** para cada linha da tabela. A SPA é **public** (Client authentication = OFF); os demais são **confidential** (ON).
 
 | Client ID | Uso | Client authentication | Service accounts | Full scope allowed | Redirect URIs (exemplo dev) | Web origins |
 |-----------|-----|------------------------|------------------|--------------------|----------------------------|-------------|
 | `wso2-key-manager` | WSO2 validar tokens / DCR | ON | **ON** | **ON** | `https://localhost:9443/*`, `https://localhost:8243/*` | `*` (ou restrinja em produção) |
-| `order-processing-portal` | Login **portal** — token só com `mod:*` (quais módulos pode abrir) | ON | OFF | **OFF** | `http://localhost:4200/*`, `http://localhost:4200/callback` | `http://localhost:4200` |
-| `order-processing-api` | Token completo (WSO2) + 2º passo OAuth `prompt=none` após portal | ON | OFF | ON | `https://localhost:9443/*`, `https://localhost:8243/*`, `http://localhost:4200/*` | `*` |
-| `orders-module` | Frontend modular Orders | ON | OFF | **OFF** | `http://localhost:4200/*`, `http://localhost:4200/callback` | `http://localhost:4200` |
-| `products-module` | Frontend modular Products | ON | OFF | **OFF** | idem | idem |
-| `customers-module` | Frontend modular Customers | ON | OFF | **OFF** | idem | idem |
+| `order-processing-portal` | **Única SPA** — `scope` pede `portal-module-scopes` (portal) ou `*-module-scopes` (API por módulo) | **OFF** (public) | OFF | **OFF** | `http://localhost:4200/*`, `http://localhost:4200/callback` | `http://localhost:4200` |
+| `order-processing-api` | Token completo (WSO2) + testes | ON | OFF | ON | `https://localhost:9443/*`, `https://localhost:8243/*`, `http://localhost:4200/*` | `*` |
 
-**Secrets**: em **Credentials**, copie ou defina secrets fortes; o projeto usa placeholders no JSON de referência (`wso2-key-manager-secret-change-in-production`, `order-api-secret-change-in-production`, etc.) — **troque em produção**.
+**Secrets** (clients confidenciais): em **Credentials**, defina secrets fortes — **troque em produção**.
 
-**PKCE**: para `order-processing-portal`, `order-processing-api` e clients `*-module`, em **Advanced** / **Advanced settings**, defina **Proof Key for Code Exchange Code Challenge Method** = `S256` (se disponível na sua UI).
+**PKCE**: para `order-processing-portal` (public) e `order-processing-api`, em **Advanced**, **Proof Key for Code Exchange Code Challenge Method** = `S256` quando disponível.
 
 **Realm roles `mod:*`**: crie `mod:customers`, `mod:products`, `mod:orders` e atribua aos grupos conforme o acesso ao portal (ex.: grupo `user` com os três se pode abrir os três módulos). O frontend valida esses escopos nas telas do portal.
 
@@ -154,11 +183,8 @@ Em **Clients** → **Create client** para cada linha da tabela. Todos são **con
 **Client scopes (aba Client scopes do client)**:
 
 - **`wso2-key-manager`** → **Default client scopes**: inclua `default`, `openid`, `roles`, `role_list`, `profile`, `email`, `order-processing-scopes` (adicione **Add client scope** → **Default** o que faltar).  
-- **`order-processing-portal`**: `role_list`, `profile`, `email`, `portal-module-scopes` (não use `order-processing-scopes` neste client).  
-- **`order-processing-api`**: `role_list`, `profile`, `email`, `order-processing-scopes`.  
-- **`orders-module`**: `role_list`, `profile`, `email`, `orders-module-scopes` (não use `order-processing-scopes` neste client).  
-- **`products-module`**: `role_list`, `profile`, `email`, `products-module-scopes`.  
-- **`customers-module`**: `role_list`, `profile`, `email`, `customers-module-scopes`.
+- **`order-processing-portal`**: **Default**: `default`, `role_list`, `profile`, `email`. **Optional**: `portal-module-scopes`, `orders-module-scopes`, `products-module-scopes`, `customers-module-scopes` (a SPA envia o nome do scope no parâmetro `scope` do authorize). Não use `order-processing-scopes` neste client.  
+- **`order-processing-api`**: `role_list`, `profile`, `email`, `order-processing-scopes`.
 
 **Protocol mapper no `wso2-key-manager`** (aba **Client scopes** do client → mappers do client ou **Mappers** direto no client, conforme versão): mapper **User Client Role** (`oidc-usermodel-client-role-mapper`):
 
@@ -170,23 +196,26 @@ Em **Clients** → **Create client** para cada linha da tabela. Todos são **con
 
 As **roles do service account** (`manage-clients`, `view-clients`, `query-clients` do client `realm-management`) costumam ser atribuídas de forma confiável via **Admin API** — ver **§ 4.2** deste guia.
 
-### 2.7 (Opcional) Token enxuto por módulo — mapeamento de roles nos client scopes
+### 2.7 Token enxuto — mapeamento de roles nos client scopes
 
-Use se o frontend usa um client OAuth por módulo (`orders-module`, `products-module`, `customers-module`). Depois de criados os client scopes `*-module-scopes` e os clients (**§ 2.6**), associe **apenas** as realm roles indicadas em cada scope (aba **Scope** → **Realm roles**):
+Passo a passo só na Admin Console: **docs/KEYCLOAK-SCOPE-MAPPINGS-UI.md**.
+
+Obrigatório para a SPA com **um** client: depois de criados os client scopes, associe **apenas** as realm roles indicadas (aba **Scope** → **Realm roles** de cada client scope):
 
 | Client scope | Realm roles |
 |--------------|-------------|
+| `portal-module-scopes` | `mod:orders`, `mod:products`, `mod:customers` |
 | `orders-module-scopes` | `orders:read`, `orders:write` |
 | `products-module-scopes` | `products:read`, `products:write` |
 | `customers-module-scopes` | `customers:read`, `customers:write` |
 
 Sem isso, o mapper pode colocar **todas** as roles do usuário no JWT.
 
-**Conferência dos clients `*-module`**: **Full scope allowed** = OFF; **Default client scopes** inclui o scope do módulo + `role_list`, `profile`, `email`.
+**Conferência do client `order-processing-portal`**: **Full scope allowed** = OFF; defaults mínimos + opcionais conforme § 2.6.
 
-**Teste**: gere um token com `orders-module` e verifique no JWT o claim **`roles`** (só orders, conforme grupo) e **`azp`** = `orders-module`.
+**Teste**: token com `scope` contendo `orders-module-scopes` — claim **`roles`** só com orders (conforme grupo); **`azp`** = `order-processing-portal`.
 
-> **Alternativa**: `keycloak/scripts/configure-module-clients.sh` aplica os mapeamentos via Admin API.
+> **UI detalhada** (mesmo efeito): **docs/KEYCLOAK-SCOPE-MAPPINGS-UI.md**.
 
 ---
 
@@ -195,8 +224,8 @@ Sem isso, o mapper pode colocar **todas** as roles do usuário no JWT.
 1. Acesse: **http://localhost:8081** (Keycloak Admin UI)
 2. Login: `admin` / `admin`
 3. Selecione o realm **order-processing**
-4. **Users** → **Add user** → crie usuários de teste
-5. Para cada usuário: aba **Groups** → **Join Group** → escolha `/user` ou `/admin`
+4. **Users** → **Add user** → crie usuários de teste **locais**, **ou** use usuários do **LDAP** após configurar a User Federation (**§ 10**)
+5. Para cada usuário: aba **Groups** → **Join Group** → escolha `/user` ou `/admin` (necessário para as roles da API como scopes)
 
 > Usuários no grupo `admin` recebem automaticamente todas as roles (incluindo write).  
 > Usuários no grupo `user` recebem apenas roles de leitura.
@@ -541,6 +570,151 @@ wso2:
     validation:
       enabled: false
 ```
+
+---
+
+## 10. (Opcional) LDAP / Active Directory — Samba 4 no Docker
+
+Esta seção é **opcional**: o fluxo Keycloak + WSO2 descrito nas seções anteriores **não** exige LDAP. Use apenas para simular **Active Directory** em laboratório e federar usuários no realm `order-processing`.
+
+O `docker-compose.yml` define o serviço **`samba-ad`** (imagem **`nowsci/samba-domain`**, Samba 4 como DC com LDAP no estilo AD). Em **Apple Silicon**, a imagem usa `platform: linux/amd64` (emulação).
+
+### 10.1 Subir o Samba AD
+
+```bash
+docker compose up -d samba-ad
+```
+
+- **Container**: `order_processing_samba_ad`  
+- Na **primeira** execução o domínio é **provisionado**; aguarde o healthcheck (cerca de **1–2 minutos**).  
+
+| Item | Valor |
+|------|--------|
+| Realm (DNS / Kerberos) | `LAB.ORDER.LOCAL` |
+| NetBIOS (1.º label) | `LAB` |
+| Base LDAP (`DOMAIN_DC`) | `dc=lab,dc=order,dc=local` |
+| Senha do **Administrator** | `SAMBA_DOMAIN_PASSWORD` no host ou padrão do compose (`DOMAINPASS`, ex.: `LabAdmin!ChangeMe`) |
+
+**Portas no host** (ferramentas LDAP fora da rede Docker):
+
+| Host | Container |
+|------|-----------|
+| **1389** | LDAP 389 |
+| **1636** | LDAPS 636 |
+
+Na rede Docker, o Keycloak deve usar o hostname do serviço **`samba-ad`** e a porta **389**.
+
+### 10.2 User Federation no Keycloak
+
+**Pré-requisitos**: `samba-ad` saudável; Keycloak no ar (ex.: `docker compose up -d samba-ad postgres keycloak`).
+
+1. Admin UI → realm **`order-processing`**.  
+2. **User federation** → **Add provider** → **ldap**.  
+3. **Vendor**: **Active Directory**. Campos principais:
+
+| Campo | Valor |
+|--------|--------|
+| **Console display name** | Ex.: `Samba AD` |
+| **Connection URL** | **`ldap://samba-ad:389`** (Keycloak no mesmo `docker compose`) |
+| **Bind DN** | `CN=Administrator,CN=Users,DC=lab,DC=order,DC=local` |
+| **Bind credential** | **Só a senha** do `Administrator` (a mesma de `DOMAINPASS` / `SAMBA_DOMAIN_PASSWORD`, ex.: `LabAdmin!ChangeMe`) |
+| **Users DN** | `CN=Users,DC=lab,DC=order,DC=local` |
+| **Username LDAP attribute** | `sAMAccountName` |
+| **RDN LDAP attribute** | `cn` |
+| **UUID LDAP attribute** | `objectGUID` |
+| **User object classes** | `person, organizationalPerson, user` |
+
+4. **Edit mode** recomendado: **`READ_ONLY`**.  
+5. **Save** → **Test connection** → **Test authentication** (ver **§ 10.3** — utilize o **sAMAccountName**, ex.: `testuser`, **não** o `CN` LDAP).
+
+**Synchronization settings** (mesma página do provedor LDAP): com **Import users** = **On**, o utilizador é criado no realm no **primeiro login** bem-sucedido; em muitas versões **não há** botão “Synchronize all users”. Para importação periódica em massa, pode ativar **Periodic full sync** temporariamente (defina o intervalo) ou confiar no primeiro login.
+
+Se o Keycloak **não** correr no Docker na mesma rede, use **`ldap://localhost:1389`** como **Connection URL**.
+
+> O compose define **`INSECURELDAP=true`** no Samba para **LDAP simples** na 389 (só laboratório). Em produção use **LDAPS**, certificados e conta de serviço com o mínimo de permissões.
+
+### 10.3 Utilizador LDAP no Samba — criar, senha, DN e validação
+
+#### Criar o utilizador
+
+```bash
+docker exec -it order_processing_samba_ad samba-tool user create testuser 'SenhaSegura123' \
+  --given-name=Test --surname=User
+```
+
+- **`testuser`** é o **sAMAccountName** (login).  
+- **`--given-name`** e **`--surname`** definem o **CN** da entrada em `CN=Users,...` (ver abaixo).
+
+A opção **`--must-change-at-next-login`** do `samba-tool` é uma **flag** (sem `=false`); omita-a se não quiser forçar troca de senha.
+
+#### Definir a palavra-passe de forma explícita (recomendado)
+
+Para evitar **Invalid credentials** no LDAP / Keycloak quando a palavra-passe efetiva não coincide com a que usou em `user create`, defina-a de novo após criar o utilizador:
+
+```bash
+docker exec -it order_processing_samba_ad samba-tool user setpassword testuser --newpassword='SenhaSegura123'
+```
+
+Use **a mesma** palavra-passe no **Test authentication** do Keycloak, no login da **Account Console** e nos `ldapsearch` de teste abaixo.
+
+#### `CN` da entrada LDAP ≠ login (`sAMAccountName`)
+
+No Samba/AD o **RDN** costuma ser o **`cn`** = `givenName` + espaço + `surname` (ex.: **`Test User`**), **não** o nome de login.
+
+| Onde | Valor (exemplo deste guia) |
+|------|----------------------------|
+| Login no Keycloak / **Test authentication** | `testuser` |
+| DN da entrada | `CN=Test User,CN=Users,DC=lab,DC=order,DC=local` |
+| Atributo | `sAMAccountName=testuser` |
+
+Um bind LDAP com **`CN=testuser,CN=Users,...`** falha; o DN correto inclui **`CN=Test User,...`** (ou o `cn` que resultar dos nomes que passou ao `samba-tool`). No Keycloak, com **Username LDAP attribute** = `sAMAccountName` e **RDN LDAP attribute** = `cn`, o servidor procura por `testuser`, obtém a entrada e faz o bind com o DN real — **não** altere estes campos salvo saber o efeito.
+
+#### Validar no Samba antes do Keycloak
+
+**1.** Obter o DN com o `Administrator` (substitua a senha se alterou `DOMAINPASS`):
+
+```bash
+docker exec order_processing_samba_ad ldapsearch -x -H ldap://127.0.0.1 \
+  -D "CN=Administrator,CN=Users,DC=lab,DC=order,DC=local" -w 'LabAdmin!ChangeMe' \
+  -b "CN=Users,DC=lab,DC=order,DC=local" \
+  "(sAMAccountName=testuser)" dn sAMAccountName
+```
+
+Copie o valor de **`dn:`** (ex.: `CN=Test User,CN=Users,DC=lab,DC=order,DC=local`).
+
+**2.** Testar bind com esse DN e a palavra-passe do utilizador:
+
+```bash
+docker exec order_processing_samba_ad ldapsearch -x -H ldap://127.0.0.1 \
+  -D "CN=Test User,CN=Users,DC=lab,DC=order,DC=local" \
+  -w 'SenhaSegura123' \
+  -b "CN=Users,DC=lab,DC=order,DC=local" "(sAMAccountName=testuser)"
+```
+
+O resultado deve terminar com **`result: 0 Success`**. Se aparecer **`Invalid credentials (49)`**, execute **`samba-tool user setpassword`** (passo acima) e repita.
+
+**3.** (Opcional) Autenticação Winbind:
+
+```bash
+docker exec order_processing_samba_ad wbinfo -a 'LAB\testuser%SenhaSegura123'
+```
+
+#### Fazer o utilizador aparecer no Keycloak
+
+Com **Import users** = **On** no provedor LDAP:
+
+1. Garanta que **Test authentication** com `testuser` + senha **passa**.  
+2. Abra **`http://localhost:8081/realms/order-processing/account`** → **Sign in** com **`testuser`** e a mesma senha.  
+3. Na **Admin Console** → **Users**, o utilizador federado deve surgir na lista.
+
+### 10.4 Grupos Keycloak e roles da API
+
+Usuários vindos do LDAP **não** entram sozinhos nos grupos **`/user`** ou **`/admin`** nem recebem as realm roles usadas como scopes. O **primeiro login** é o primeiro **acesso autenticado ao Keycloak** com esse usuário (por exemplo login na **aplicação** via OIDC, **Account Console** do realm, ou *Resource Owner Password* de teste): o Keycloak cria ou sincroniza o usuário federado no realm `order-processing`. **Depois disso**, na **Admin Console** (como `admin`):
+
+- **Users** → selecione o usuário federado → **Groups** → **Join Group** → `/user` ou `/admin`; ou  
+- Configure um **mapper** LDAP → grupos (*group-ldap-mapper*) para mapear grupos do AD para grupos do Keycloak com as *role mappings* corretas.
+
+A gestão do domínio Samba faz-se com **`samba-tool`** (não há console web AD incluída no projeto).
 
 ---
 

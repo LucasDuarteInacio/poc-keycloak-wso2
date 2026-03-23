@@ -52,7 +52,7 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
     return false;
   }
 
-  // Módulo: permissões só do client da rota (ex. customers:read no JWT do customers-module).
+  // Módulo: permissões do JWT obtido com o client scope daquele módulo (ex. customers:read).
   const moduleKey = keycloak.getModuleForRoute(path);
   if (!moduleKey) {
     router.navigate(['/forbidden']);

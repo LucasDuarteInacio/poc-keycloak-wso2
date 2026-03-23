@@ -1,7 +1,7 @@
 {
   "realm": "order-processing",
   "enabled": true,
-  "sslRequired": "external",
+  "sslRequired": "none",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
@@ -329,10 +329,9 @@
     {
       "clientId": "order-processing-portal",
       "name": "Order Processing Portal",
-      "description": "Portal UI — token só com escopos mod:* (qual módulo pode abrir)",
+      "description": "SPA única (PKCE) — escopos mod:* vs API por client scopes opcionais",
       "enabled": true,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "order-processing-portal-secret-change-in-production",
+      "publicClient": true,
       "redirectUris": [
         "http://localhost:4200/*",
         "http://localhost:4200/callback"
@@ -342,13 +341,18 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
-      "publicClient": false,
       "protocol": "openid-connect",
       "fullScopeAllowed": false,
       "attributes": {
         "pkce.code.challenge.method": "S256"
       },
-      "defaultClientScopes": ["role_list", "profile", "email", "portal-module-scopes"]
+      "defaultClientScopes": ["default", "role_list", "profile", "email"],
+      "optionalClientScopes": [
+        "portal-module-scopes",
+        "orders-module-scopes",
+        "products-module-scopes",
+        "customers-module-scopes"
+      ]
     },
     {
       "clientId": "order-processing-api",
@@ -374,78 +378,6 @@
         "pkce.code.challenge.method": "S256"
       },
       "defaultClientScopes": ["role_list", "profile", "email", "order-processing-scopes"]
-    },
-    {
-      "clientId": "orders-module",
-      "name": "Módulo Orders",
-      "description": "Cliente restrito ao módulo Orders (token enxuto)",
-      "enabled": true,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "orders-module-secret-change-in-production",
-      "redirectUris": [
-        "http://localhost:4200/*",
-        "http://localhost:4200/callback"
-      ],
-      "webOrigins": ["http://localhost:4200"],
-      "standardFlowEnabled": true,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": false,
-      "publicClient": false,
-      "protocol": "openid-connect",
-      "fullScopeAllowed": false,
-      "attributes": {
-        "pkce.code.challenge.method": "S256"
-      },
-      "defaultClientScopes": ["role_list", "profile", "email", "orders-module-scopes"]
-    },
-    {
-      "clientId": "products-module",
-      "name": "Módulo Products",
-      "description": "Cliente restrito ao módulo Products (token enxuto)",
-      "enabled": true,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "products-module-secret-change-in-production",
-      "redirectUris": [
-        "http://localhost:4200/*",
-        "http://localhost:4200/callback"
-      ],
-      "webOrigins": ["http://localhost:4200"],
-      "standardFlowEnabled": true,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": false,
-      "publicClient": false,
-      "protocol": "openid-connect",
-      "fullScopeAllowed": false,
-      "attributes": {
-        "pkce.code.challenge.method": "S256"
-      },
-      "defaultClientScopes": ["role_list", "profile", "email", "products-module-scopes"]
-    },
-    {
-      "clientId": "customers-module",
-      "name": "Módulo Customers",
-      "description": "Cliente restrito ao módulo Customers (token enxuto)",
-      "enabled": true,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "customers-module-secret-change-in-production",
-      "redirectUris": [
-        "http://localhost:4200/*",
-        "http://localhost:4200/callback"
-      ],
-      "webOrigins": ["http://localhost:4200"],
-      "standardFlowEnabled": true,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": false,
-      "publicClient": false,
-      "protocol": "openid-connect",
-      "fullScopeAllowed": false,
-      "attributes": {
-        "pkce.code.challenge.method": "S256"
-      },
-      "defaultClientScopes": ["role_list", "profile", "email", "customers-module-scopes"]
     }
   ]
 }

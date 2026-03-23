@@ -25,13 +25,13 @@ OrderProcessingManagement/
 ├── keycloak/
 │   ├── realm/
 │   │   └── order-processing-realm.json         # Referência de configuração (realm/clients criados pela UI — ver SETUP §2)
-│   └── scripts/
-│       └── configure-module-clients.sh         # (Opcional) Scope mappings via Admin API — ver SETUP §2.7 (UI)
+│   └── scripts/                                # ver disable-ssl-required-dev.sh (dev)
 ├── postgres/
 │   └── init/
 │       └── 01-wso2-databases.sql               # Cria WSO2AM_DB e WSO2SHARED_DB no Postgres
 ├── docs/
 │   ├── SETUP-KEYCLOAK-WSO2-SSO.md             # Guia passo a passo completo
+│   ├── KEYCLOAK-SCOPE-MAPPINGS-UI.md          # Mapear realm roles → client scopes (UI)
 │   ├── TROUBLESHOOTING.md                      # Erros conhecidos e soluções
 │   └── MEMORY-BANK.md                          # Este arquivo
 └── src/main/resources/
@@ -93,17 +93,15 @@ orders:read      orders:write
 
 ### Clientes registrados
 
-| clientId               | Tipo         | Secret                                         | Uso                                        |
-|------------------------|--------------|------------------------------------------------|--------------------------------------------|
-| `wso2-key-manager`     | Confidential | `wso2-key-manager-secret-change-in-production` | WSO2 gerenciar tokens (service account)    |
-| `order-processing-api` | Confidential | `order-api-secret-change-in-production`        | Consumo da API / testes diretos (token completo) |
-| `orders-module`        | Confidential | `orders-module-secret-change-in-production`    | Frontend modular — token apenas com orders:* |
-| `products-module`      | Confidential | `products-module-secret-change-in-production`  | Frontend modular — token apenas com products:* |
-| `customers-module`     | Confidential | `customers-module-secret-change-in-production` | Frontend modular — token apenas com customers:* |
+| clientId                 | Tipo         | Secret                                         | Uso                                        |
+|--------------------------|--------------|------------------------------------------------|--------------------------------------------|
+| `wso2-key-manager`       | Confidential | `wso2-key-manager-secret-change-in-production` | WSO2 gerenciar tokens (service account)    |
+| `order-processing-api`   | Confidential | `order-api-secret-change-in-production`        | Consumo da API / testes diretos (token completo) |
+| `order-processing-portal`| **Public**   | — (PKCE)                                       | **Única SPA** — portal vs módulos via **client scopes opcionais** |
 
-> **Atenção**: todos os clientes são `publicClient: false`. O `client_secret` é **obrigatório** nas chamadas.
+> **SPA**: um client (`order-processing-portal`). Login do portal pede `portal-module-scopes` (token com `mod:*`); ao entrar num módulo, novo redirect OAuth com `orders-module-scopes` / etc. (`fullScopeAllowed: false` no client). Sem `client_secret` no frontend.
 >
-> **Módulos por client**: Os clientes `*-module` têm `fullScopeAllowed: false` e usam client scopes dedicados com scope mappings, limitando o token aos escopos do respectivo módulo. Configure os scope mappings **pela UI**: ver **docs/SETUP-KEYCLOAK-WSO2-SSO.md** § **2.7**. Alternativa: `keycloak/scripts/configure-module-clients.sh`.
+> **Scope mappings** nos client scopes: **docs/SETUP-KEYCLOAK-WSO2-SSO.md** § **2.7** e passo a passo na UI em **docs/KEYCLOAK-SCOPE-MAPPINGS-UI.md**.
 
 ### Client `wso2-key-manager` — configuração crítica
 
@@ -118,14 +116,11 @@ O `wso2-key-manager` precisa de:
    - Inclui roles do `realm-management` no access token → DCR API aceita o token
 4. **Service account roles** (`manage-clients`, `view-clients`, `query-clients` do client `realm-management`) — atribuídas via Admin API (não via UI do Keycloak 20.x)
 
-### Arquitetura modular (token por client)
+### Arquitetura modular (token por client scope, um client)
 
-Para evitar token grande quando o usuário tem muitas permissões, o frontend pode usar **um client por módulo**:
-- Cada módulo (Orders, Products, Customers) tem seu próprio client OAuth
-- O token inclui apenas os scopes daquele módulo
-- Ao trocar de módulo, o frontend faz novo login com o client do módulo (SSO evita nova senha)
+Para evitar token grande, a SPA usa **um client** e **client scopes opcionais** (`portal-module-scopes`, `orders-module-scopes`, …). O parâmetro `scope` no `/auth` define o que entra no JWT; ao trocar de módulo, novo fluxo OAuth (SSO, sem senha de novo).
 
-**Configuração na UI**: Configure os scope mappings dos client scopes `*-module-scopes` **pela UI do Keycloak** (passo a passo em **SETUP-KEYCLOAK-WSO2-SSO.md** § **2.7**). Opcionalmente: `bash keycloak/scripts/configure-module-clients.sh`.
+**Configuração**: scope mappings nos client scopes — **SETUP** § **2.7** e **docs/KEYCLOAK-SCOPE-MAPPINGS-UI.md**.
 
 ### Realm no Keycloak (somente UI no compose)
 

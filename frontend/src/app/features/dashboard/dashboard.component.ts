@@ -2,7 +2,7 @@ import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { KeycloakService } from '../../core/auth/keycloak.service';
-import { environment, type ModuleClient } from '../../../environments/environment';
+import { environment, type ModuleConfig } from '../../../environments/environment';
 import { SessionTokenScopesComponent } from '../../shared/session-token-scopes.component';
 
 @Component({
@@ -111,7 +111,7 @@ export class DashboardComponent {
   emailVerified = computed(() => this.profile()?.email_verified ?? false);
 
   accessibleModules = computed(() => {
-    const out: Array<{ key: string; client: ModuleClient; icon: string; toneClass: string }> = [];
+    const out: Array<{ key: string; client: ModuleConfig; icon: string; toneClass: string }> = [];
     for (const [key, client] of Object.entries(this.clients)) {
       if (this.canEnterModule(key, client)) {
         const meta = this.moduleMeta[key] ?? { icon: 'bi-box-seam', toneClass: 'tone-default' };
@@ -125,7 +125,7 @@ export class DashboardComponent {
     return environment.keycloak.modulePortalScopes?.[moduleKey] ?? moduleKey;
   }
 
-  private canEnterModule(key: string, mod: ModuleClient): boolean {
+  private canEnterModule(key: string, mod: ModuleConfig): boolean {
     if (this.keycloak.isPortalSession()) {
       return this.keycloak.hasPortalAccessToModule(key);
     }

@@ -72,4 +72,13 @@ add_scope_mapping_to_scope "$PRODUCTS_SCOPE" "$PRODUCTS_READ" "$PRODUCTS_WRITE"
 echo ">>> Adicionando scope mappings em customers-module-scopes..."
 add_scope_mapping_to_scope "$CUSTOMERS_SCOPE" "$CUSTOMERS_READ" "$CUSTOMERS_WRITE"
 
-echo ">>> Configuração concluída. Os tokens dos clientes por módulo agora incluem apenas os scopes do respectivo módulo."
+MOD_ORDERS=$(get_role_id "mod:orders")
+MOD_PRODUCTS=$(get_role_id "mod:products")
+MOD_CUSTOMERS=$(get_role_id "mod:customers")
+PORTAL_SCOPE=$(get_scope_id "portal-module-scopes")
+if [ -n "$PORTAL_SCOPE" ] && [ "$PORTAL_SCOPE" != "null" ]; then
+  echo ">>> Adicionando scope mappings em portal-module-scopes (mod:*)..."
+  add_scope_mapping_to_scope "$PORTAL_SCOPE" "$MOD_ORDERS" "$MOD_PRODUCTS" "$MOD_CUSTOMERS"
+fi
+
+echo ">>> Concluído. O client SPA único pede estes scopes via parâmetro scope; cada client scope limita as roles no token."

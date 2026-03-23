@@ -37,6 +37,8 @@ export class KeycloakService {
     expiresAt: 'kc_expires_at',
     idToken: 'kc_id_token',
     clientId: 'kc_client_id',
+    /** `full` = portal; caso contrário chave em `moduleClients` (orders, products, …) */
+    sessionContext: 'kc_session_context',
     pendingModule: 'kc_pending_module',
     returnTo: 'kc_return_to',
   };
@@ -48,6 +50,7 @@ export class KeycloakService {
     expiresAt: 'kc_portal_backup_expires',
     idToken: 'kc_portal_backup_id',
     clientId: 'kc_portal_backup_client',
+    sessionContext: 'kc_portal_backup_session_context',
   };
 
   /** Removidos do fluxo antigo (order-processing-api separado) */
@@ -109,27 +112,26 @@ export class KeycloakService {
     return `${window.location.origin}/callback`;
   }
 
-  private get portalClientId(): string {
-    return environment.keycloak.portalClientId;
+  private get spaClientId(): string {
+    return environment.keycloak.clientId;
   }
 
-  private getClientCredentials(clientId: string): { clientId: string; clientSecret: string } {
-    if (clientId === this.portalClientId) {
-      return {
-        clientId: this.portalClientId,
-        clientSecret: environment.keycloak.portalClientSecret,
-      };
-    }
-    const modules = environment.keycloak.moduleClients ?? {};
-    for (const m of Object.values(modules)) {
-      if (m.clientId === clientId) {
-        return { clientId: m.clientId, clientSecret: m.clientSecret };
+  private getSessionContext(): string {
+    return localStorage.getItem(this.storageKeys.sessionContext) ?? 'full';
+  }
+
+  /** Escopos OIDC: defaults do realm + client scopes opcionais (portal vs módulo). */
+  private buildAuthorizeScope(moduleKey?: string): string {
+    const parts = ['openid', 'default'];
+    if (moduleKey) {
+      const mod = environment.keycloak.moduleClients?.[moduleKey];
+      if (mod?.oauthScopes?.length) {
+        parts.push(...mod.oauthScopes);
       }
+    } else {
+      parts.push(...environment.keycloak.portalOAuthScopes);
     }
-    return {
-      clientId: this.portalClientId,
-      clientSecret: environment.keycloak.portalClientSecret,
-    };
+    return [...new Set(parts)].join(' ');
   }
 
   async init(): Promise<boolean> {
@@ -139,6 +141,9 @@ export class KeycloakService {
     const expiresAt = Number(localStorage.getItem(this.storageKeys.expiresAt) ?? 0);
 
     if (token && Date.now() < expiresAt) {
+      if (!localStorage.getItem(this.storageKeys.sessionContext)) {
+        localStorage.setItem(this.storageKeys.sessionContext, 'full');
+      }
       await this.runTokenMutation(() => this.applyToken(token));
       if (this.isPortalSession()) {
         this.copyMainSessionToPortalBackup();
@@ -155,13 +160,12 @@ export class KeycloakService {
   }
 
   /**
-   * @param moduleKey Client do módulo. Sem parâmetro: client do portal (`mod:*`).
+   * @param moduleKey Chave do módulo em `moduleClients`. Sem parâmetro: login portal (`portalOAuthScopes`).
    */
   login(moduleKey?: string, returnTo?: string): void {
     const client = moduleKey
       ? environment.keycloak.moduleClients?.[moduleKey]
       : null;
-    const clientId = client?.clientId ?? this.portalClientId;
 
     if (moduleKey && this.isPortalSession()) {
       this.copyMainSessionToPortalBackup();
@@ -182,10 +186,10 @@ export class KeycloakService {
 
     this.generateCodeChallenge(codeVerifier).then((codeChallenge) => {
       const params = new URLSearchParams({
-        client_id: clientId,
+        client_id: this.spaClientId,
         redirect_uri: this.redirectUri,
         response_type: 'code',
-        scope: 'openid',
+        scope: this.buildAuthorizeScope(moduleKey),
         code_challenge: codeChallenge,
         code_challenge_method: 'S256',
       });
@@ -199,18 +203,13 @@ export class KeycloakService {
     const pendingModule = sessionStorage.getItem(this.storageKeys.pendingModule);
     const returnTo = sessionStorage.getItem(this.storageKeys.returnTo) ?? '/portal';
 
-    const modClient = pendingModule
-      ? environment.keycloak.moduleClients?.[pendingModule]
-      : null;
-    const clientId = modClient?.clientId ?? this.portalClientId;
-    const clientSecret = modClient?.clientSecret ?? environment.keycloak.portalClientSecret;
+    const sessionCtx = pendingModule ?? 'full';
 
     if (!codeVerifier) return { success: false };
 
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: this.spaClientId,
       redirect_uri: this.redirectUri,
       code,
       code_verifier: codeVerifier,
@@ -231,7 +230,8 @@ export class KeycloakService {
       sessionStorage.removeItem(this.storageKeys.returnTo);
 
       await this.runTokenMutation(async () => {
-        this.storeTokens(data, clientId);
+        localStorage.setItem(this.storageKeys.sessionContext, sessionCtx);
+        this.storeTokens(data);
         await this.applyToken(data.access_token);
       });
 
@@ -253,17 +253,11 @@ export class KeycloakService {
 
   private async refreshTokenImpl(): Promise<boolean> {
     const refresh = localStorage.getItem(this.storageKeys.refreshToken);
-    const storedClientId = localStorage.getItem(this.storageKeys.clientId);
     if (!refresh) return false;
-
-    const { clientId, clientSecret } = this.getClientCredentials(
-      storedClientId ?? this.portalClientId
-    );
 
     const body = new URLSearchParams({
       grant_type: 'refresh_token',
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: this.spaClientId,
       refresh_token: refresh,
     });
 
@@ -280,7 +274,7 @@ export class KeycloakService {
       }
 
       const data: TokenResponse = await response.json();
-      this.storeTokens(data, storedClientId ?? undefined);
+      this.storeTokens(data);
       await this.applyToken(data.access_token);
       return true;
     } catch {
@@ -292,7 +286,7 @@ export class KeycloakService {
   logout(): void {
     const idToken = localStorage.getItem(this.storageKeys.idToken);
     const clientId =
-      localStorage.getItem(this.storageKeys.clientId) ?? this.portalClientId;
+      localStorage.getItem(this.storageKeys.clientId) ?? this.spaClientId;
     this.clearTokens();
     this.isAuthenticated.set(false);
     this.userProfile.set(null);
@@ -342,11 +336,11 @@ export class KeycloakService {
       return this.effectiveRolesCache.roles;
     }
 
-    const { payload, azp } = this.readActiveToken();
+    const { payload } = this.readActiveToken();
     const fromJwt = payload ? this.extractRoles(payload) : [];
     const fromProfile = this.userProfile()?.roles ?? [];
     let merged = [...new Set([...fromProfile, ...fromJwt])];
-    if (azp === this.portalClientId) {
+    if (this.getSessionContext() === 'full') {
       merged = merged.filter((r) => r.startsWith('mod:'));
     }
 
@@ -385,12 +379,8 @@ export class KeycloakService {
     if (!payload) {
       return this.getCurrentModule() === moduleKey;
     }
-    const azp = payload['azp'] as string | undefined;
-    if (azp !== this.portalClientId) {
-      return this.getCurrentModule() === moduleKey;
-    }
-    const roles = this.extractRoles(payload);
-    return roles.includes(scope);
+    const roles = this.extractRoles(payload).filter((r) => r.startsWith('mod:'));
+    return roles.includes(scope) || this.getCurrentModule() === moduleKey;
   }
 
   hasAnyPortalModuleScope(): boolean {
@@ -430,14 +420,9 @@ export class KeycloakService {
   }
 
   getCurrentModule(): string | null {
-    const { azp: clientId } = this.readActiveToken();
-    if (!clientId) return null;
-    if (clientId === this.portalClientId) return 'full';
-    const modules = environment.keycloak.moduleClients ?? {};
-    for (const [key, m] of Object.entries(modules)) {
-      if (m.clientId === clientId) return key;
-    }
-    return null;
+    const ctx = this.getSessionContext();
+    if (ctx === 'full') return 'full';
+    return environment.keycloak.moduleClients?.[ctx] ? ctx : null;
   }
 
   getModuleForRoute(route: string): string | null {
@@ -500,6 +485,7 @@ export class KeycloakService {
       [this.portalBackupKeys.expiresAt, this.storageKeys.expiresAt],
       [this.portalBackupKeys.idToken, this.storageKeys.idToken],
       [this.portalBackupKeys.clientId, this.storageKeys.clientId],
+      [this.portalBackupKeys.sessionContext, this.storageKeys.sessionContext],
     ];
     for (const [from, to] of pairs) {
       const v = localStorage.getItem(from);
@@ -518,6 +504,7 @@ export class KeycloakService {
       [this.storageKeys.expiresAt, this.portalBackupKeys.expiresAt],
       [this.storageKeys.idToken, this.portalBackupKeys.idToken],
       [this.storageKeys.clientId, this.portalBackupKeys.clientId],
+      [this.storageKeys.sessionContext, this.portalBackupKeys.sessionContext],
     ];
     for (const [from, to] of pairs) {
       const v = localStorage.getItem(from);
@@ -535,14 +522,11 @@ export class KeycloakService {
     const jwtPayload = this.parseJwt(token);
     if (!jwtPayload) return;
 
-    const clientId = (jwtPayload['azp'] as string) ?? undefined;
-    if (clientId) {
-      localStorage.setItem(this.storageKeys.clientId, clientId);
-    }
+    localStorage.setItem(this.storageKeys.clientId, this.spaClientId);
 
     const rolesFromJwt = this.extractRoles(jwtPayload);
     let jwtOnlyRoles = [...new Set(rolesFromJwt)];
-    if (clientId === this.portalClientId) {
+    if (this.getSessionContext() === 'full') {
       jwtOnlyRoles = jwtOnlyRoles.filter((r) => r.startsWith('mod:'));
     }
 
@@ -556,7 +540,8 @@ export class KeycloakService {
       family_name: jwtPayload['family_name'] as string | undefined,
     };
 
-    // Antes do userinfo (rede): guards e getCurrentModule() já refletem o client do JWT.
+    const clientId = this.spaClientId;
+    // Antes do userinfo (rede): guards e getCurrentModule() usam sessionContext + JWT.
     this.userProfile.set({ ...baseFields, roles: jwtOnlyRoles, clientId });
     this.isAuthenticated.set(true);
 
@@ -566,7 +551,7 @@ export class KeycloakService {
       : [];
     let roles = [...new Set([...rolesFromJwt, ...rolesFromUserInfo])];
 
-    if (clientId === this.portalClientId) {
+    if (this.getSessionContext() === 'full') {
       roles = roles.filter((r) => r.startsWith('mod:'));
     }
 
@@ -668,7 +653,7 @@ export class KeycloakService {
     return [...new Set(roles)];
   }
 
-  private storeTokens(data: TokenResponse, clientId?: string): void {
+  private storeTokens(data: TokenResponse): void {
     localStorage.setItem(this.storageKeys.accessToken, data.access_token);
     localStorage.setItem(this.storageKeys.refreshToken, data.refresh_token);
     if (data.id_token) {
@@ -676,10 +661,8 @@ export class KeycloakService {
     }
     const expiresAt = Date.now() + data.expires_in * 1000;
     localStorage.setItem(this.storageKeys.expiresAt, expiresAt.toString());
-    if (clientId) {
-      localStorage.setItem(this.storageKeys.clientId, clientId);
-    }
-    if (clientId === this.portalClientId) {
+    localStorage.setItem(this.storageKeys.clientId, this.spaClientId);
+    if (this.getSessionContext() === 'full') {
       this.copyMainSessionToPortalBackup();
     }
   }
