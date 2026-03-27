@@ -1,3 +1,15 @@
 {
-    "java.compile.nullAnalysis.mode": "automatic"
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.jdt.ls.java.home": "/Users/lucasduarte/Library/Java/JavaVirtualMachines/openjdk-25.0.1/Contents/Home",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-25",
+            "path": "/Users/lucasduarte/Library/Java/JavaVirtualMachines/openjdk-25.0.1/Contents/Home",
+            "default": true
+        },
+        {
+            "name": "JavaSE-21",
+            "path": "/Users/lucasduarte/Library/Java/JavaVirtualMachines/corretto-21.0.9/Contents/Home"
+        }
+    ]
 }

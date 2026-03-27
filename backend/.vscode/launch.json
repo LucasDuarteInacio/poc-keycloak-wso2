@@ -9,7 +9,8 @@
             "name": "OrderProcessingManagementApplication",
             "request": "launch",
             "mainClass": "com.challenge.OrderProcessingManagement.OrderProcessingManagementApplication",
-            "projectName": "OrderProcessingManagement"
+            "projectName": "OrderProcessingManagement",
+            "javaExec": "/Users/lucasduarte/Library/Java/JavaVirtualMachines/openjdk-25.0.1/Contents/Home/bin/java"
         }
     ]
 }
