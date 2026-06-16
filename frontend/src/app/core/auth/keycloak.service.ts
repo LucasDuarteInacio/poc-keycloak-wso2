@@ -282,7 +282,7 @@ export class KeycloakService {
 
   /** Monta o nome da chave `localStorage` do slot (ex.: `kc_ctx_orders_accessToken`). */
   private contextSlotKey(contextId: string, field: SyncedSessionField): string {
-    return `kc_ctx_${this.contextIdForStorage(contextId)}_${field}`;
+    return `_${this.contextIdForStorage(contextId)}_${field}`;
   }
 
   private allContextIds(): string[] {

@@ -54,7 +54,7 @@ services:
       retries: 5
 
   keycloak:
-    image: quay.io/keycloak/keycloak:20.0.5
+    image: quay.io/keycloak/keycloak:25.0.4
     container_name: order_processing_keycloak
     command: start-dev --import-realm
     environment:
@@ -66,12 +66,26 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Hostname v2: URLs em http:// evitam impor HTTPS; use http://localhost:8081 no browser (porta publicada).
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_ADMIN: http://localhost:8081
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
     volumes:
       - ./keycloak/realm:/opt/keycloak/data/import:ro
     ports:
       - "8081:8080"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q '200'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 180s
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,12 +93,12 @@ services:
   # Aplica sslRequired=NONE em master e order-processing (HTTP em dev). O realm master não vem do JSON;
   # sem isto /admin/ pode mostrar "HTTPS required" mesmo em http://localhost:8081.
   keycloak-ssl-init:
-    image: quay.io/keycloak/keycloak:20.0.5
+    image: quay.io/keycloak/keycloak:25.0.4
     container_name: order_processing_keycloak_ssl_init
     network_mode: service:keycloak
     depends_on:
       keycloak:
-        condition: service_started
+        condition: service_healthy
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
@@ -92,27 +106,48 @@ services:
     command:
       - |
         set -e
-        echo "keycloak-ssl-init: aguardando Keycloak em 127.0.0.1:8080..."
-        i=0
-        while [ "$$i" -lt 90 ]; do
-          i=$$((i+1))
-          if curl -sf -o /dev/null "http://127.0.0.1:8080/realms/master"; then
-            echo "keycloak-ssl-init: Keycloak respondeu (tentativa $$i)"
+        echo "keycloak-ssl-init: aguardando Admin CLI (a imagem Keycloak 25 não inclui curl)..."
+        ok=0
+        for i in $$(seq 1 90); do
+          if /opt/keycloak/bin/kcadm.sh config credentials \
+            --server http://127.0.0.1:8080 --realm master \
+            --user "$$KEYCLOAK_ADMIN" --password "$$KEYCLOAK_ADMIN_PASSWORD" 2>/dev/null; then
+            echo "keycloak-ssl-init: login admin OK (tentativa $$i)"
+            ok=1
             break
           fi
           sleep 2
         done
-        if ! curl -sf -o /dev/null "http://127.0.0.1:8080/realms/master"; then
-          echo "keycloak-ssl-init: ERRO — Keycloak não respondeu a tempo."
+        if [ "$$ok" -ne 1 ]; then
+          echo "keycloak-ssl-init: ERRO — login admin não funcionou a tempo (Keycloak ainda a migrar a BD?)."
           exit 1
         fi
-        sleep 4
-        /opt/keycloak/bin/kcadm.sh config credentials \
-          --server http://127.0.0.1:8080 --realm master \
-          --user "$$KEYCLOAK_ADMIN" --password "$$KEYCLOAK_ADMIN_PASSWORD"
-        /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE
+        sleep 3
+        master_ok=0
+        for attempt in 1 2 3; do
+          if /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE; then
+            master_ok=1
+            break
+          fi
+          sleep 5
+        done
+        if [ "$$master_ok" -ne 1 ]; then
+          echo "keycloak-ssl-init: ERRO — update realms/master (sslRequired) falhou."
+          exit 1
+        fi
         if /opt/keycloak/bin/kcadm.sh get realms/order-processing >/dev/null 2>&1; then
-          /opt/keycloak/bin/kcadm.sh update realms/order-processing -s sslRequired=NONE
+          op_ok=0
+          for attempt in 1 2 3; do
+            if /opt/keycloak/bin/kcadm.sh update realms/order-processing -s sslRequired=NONE; then
+              op_ok=1
+              break
+            fi
+            sleep 5
+          done
+          if [ "$$op_ok" -ne 1 ]; then
+            echo "keycloak-ssl-init: ERRO — update realms/order-processing (sslRequired) falhou."
+            exit 1
+          fi
         fi
         echo "keycloak-ssl-init: sslRequired=NONE aplicado (master e order-processing se existir)."
     restart: "no"

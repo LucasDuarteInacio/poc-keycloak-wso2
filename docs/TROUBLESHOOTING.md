@@ -1,6 +1,6 @@
 # Troubleshooting — Keycloak + WSO2 API Manager
 
-> Erros identificados e resolvidos durante a integração Keycloak 20.0.5 + WSO2 APIM 4.5.0
+> Erros identificados e resolvidos durante a integração Keycloak 25.0.4 + WSO2 APIM 4.5.0
 
 ---
 
@@ -37,7 +37,7 @@ type=CLIENT_LOGIN_ERROR, error=invalid_request, grant_type=client_credentials
 
 ### Causa
 
-O tipo `Auth0` no WSO2 Key Manager usa o conector `auth0.key.manager` internamente. Esse conector **sempre envia `scope=` (string vazia)** ao endpoint de token do Keycloak. O Keycloak 20.x rejeita `client_credentials` com scope vazio.
+O tipo `Auth0` no WSO2 Key Manager usa o conector `auth0.key.manager` internamente. Esse conector **sempre envia `scope=` (string vazia)** ao endpoint de token do Keycloak. O Keycloak rejeita `client_credentials` com scope vazio.
 
 O campo `Audience` na UI do WSO2 **não resolve** o problema — ele vira o parâmetro `audience=` (padrão Auth0, não OAuth2 padrão), e o Keycloak não interpreta isso como `scope=`.
 
@@ -240,7 +240,7 @@ curl -s -X POST "http://localhost:8081/admin/realms/order-processing/users/$SA_U
   -d "$ROLES_JSON"
 ```
 
-> **Atenção**: a UI do Keycloak 20.x (aba "Service Account Roles" → "Assign role") **não persiste as roles** corretamente. Sempre usar a Admin API acima.
+> **Atenção**: em algumas versões, a UI (aba "Service Account Roles" → "Assign role") **não persiste as roles** corretamente. Sempre usar a Admin API acima.
 
 **Passo 2** — Verificar o protocol mapper no client `wso2-key-manager`:
 
@@ -493,11 +493,12 @@ Ao abrir **http://localhost:8081** (ou outro URL em **HTTP**), o Keycloak respon
 
 ### Causa
 
-O realm tem **Require SSL** = **External requests** ou **All requests**. Pedidos feitos por **HTTP** a partir de um host que o Keycloak trata como “externo” (por exemplo **IP da LAN** em vez de `localhost`) são recusados. O realm **`master`** não vem do JSON do projeto — mantém o padrão até alterar na UI ou via API.
+1. O realm tem **Require SSL** = **External requests** ou **All requests**. Pedidos feitos por **HTTP** a partir de um host que o Keycloak trata como “externo” (por exemplo **IP da LAN** em vez de `localhost`) são recusados. O realm **`master`** não vem do JSON do projeto — mantém o padrão até alterar na UI ou via API.
+2. **Keycloak 25+ (imagem Docker)**: o pacote **`curl` foi removido** da imagem. O serviço **`keycloak-ssl-init`** antigo usava `curl` para esperar o servidor; o comando falhava e **`sslRequired=NONE` nunca era aplicado**. O compose atual usa **Admin CLI (`kcadm`)** em loop e **healthcheck** na porta de gestão **9000** (sem `curl`).
 
 ### Solução
 
-1. Com o compose do projeto, suba os serviços e deixe o one-shot **`keycloak-ssl-init`** concluir (`docker compose logs keycloak-ssl-init`). Só então abra **http://localhost:8081/admin/** (ou atualize a página).
+1. Com o compose do projeto, suba os serviços e deixe o one-shot **`keycloak-ssl-init`** concluir com sucesso (`docker compose logs keycloak-ssl-init`). Só então abra **http://localhost:8081/admin/** (ou atualize a página). O Keycloak está configurado com **`KC_HOSTNAME` / `KC_HOSTNAME_ADMIN`** em `http://localhost:8081` — prefira esse URL em dev (em vez de `http://127.0.0.1:8081`) para coincidir com o hostname.
 2. Use **http://localhost:8081** no browser (evite só o IP da máquina na rede, em dev).
 3. **Realm settings** → **Login** → **Require SSL** → **`None`** no realm **`master`** e no **`order-processing`**.
 4. **Base já criada:** o import `order-processing-realm.json` só aplica `sslRequired: none` em **novas** importações. Para corrigir sem UI, com o container no ar:

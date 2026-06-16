@@ -1,6 +1,10 @@
 {
     "java.compile.nullAnalysis.mode": "automatic",
     "java.jdt.ls.java.home": "/Users/lucasduarte/Library/Java/JavaVirtualMachines/openjdk-25.0.1/Contents/Home",
+    "terminal.integrated.env.osx": {
+        "JAVA_HOME": "/opt/homebrew/Cellar/openjdk@17/17.0.18/libexec/openjdk.jdk/Contents/Home",
+        "PATH": "/opt/homebrew/Cellar/openjdk@17/17.0.18/libexec/openjdk.jdk/Contents/Home/bin:${env:PATH}"
+    },
     "java.configuration.runtimes": [
         {
             "name": "JavaSE-25",

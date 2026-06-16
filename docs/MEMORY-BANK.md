@@ -1,6 +1,6 @@
 # Memory Bank — Order Processing Management
 
-> Última atualização: 16/03/2026 — WSO2 migrado para PostgreSQL; persistência garantida  
+> Última atualização: 16/04/2026 — Keycloak atualizado para 25.0.4 (imagem Docker)  
 > Contexto: Keycloak + WSO2 API Manager + SSO
 
 ---
@@ -10,7 +10,7 @@
 Projeto Spring Boot 3 de gerenciamento de pedidos com:
 
 - **Backend**: Java 21 + Spring Boot 3.5.8 + JPA + Liquibase + PostgreSQL
-- **Auth**: Keycloak 20.0.5 como Identity Provider (realm `order-processing`)
+- **Auth**: Keycloak 25.0.4 como Identity Provider (realm `order-processing`)
 - **Gateway**: WSO2 API Manager 4.5.0 para proteção de rotas via scopes
 - **SSO**: Habilitado nativamente no realm Keycloak
 
@@ -114,7 +114,7 @@ O `wso2-key-manager` precisa de:
    - `claim.name`: `resource_access.realm-management.roles`
    - `usermodel.clientRoleMapping.clientId`: `realm-management`
    - Inclui roles do `realm-management` no access token → DCR API aceita o token
-4. **Service account roles** (`manage-clients`, `view-clients`, `query-clients` do client `realm-management`) — atribuídas via Admin API (não via UI do Keycloak 20.x)
+4. **Service account roles** (`manage-clients`, `view-clients`, `query-clients` do client `realm-management`) — atribuídas via Admin API (a UI de Service Account Roles costuma ser pouco fiável; preferir Admin API)
 
 ### Arquitetura modular (token por client scope, um client)
 
@@ -122,10 +122,10 @@ Para evitar token grande, a SPA usa **um client** e **client scopes opcionais** 
 
 **Configuração**: scope mappings nos client scopes — **SETUP** § **2.7** e **docs/KEYCLOAK-SCOPE-MAPPINGS-UI.md**.
 
-### Realm no Keycloak (somente UI no compose)
+### Realm no Keycloak (compose)
 
-- **Docker Compose**: Keycloak sobe com `start-dev` **sem** import automático; não há volume `keycloak/realm` montado.
-- **Configuração**: criar realm `order-processing`, roles, grupos, client scopes e clients **pela Admin UI** — ver **SETUP-KEYCLOAK-WSO2-SSO.md** § **2**. O JSON em `keycloak/realm/` permanece como **referência** (import manual na UI ou CLI, se desejar).
+- **Docker Compose**: Keycloak sobe com `start-dev --import-realm` e volume `./keycloak/realm` → `/opt/keycloak/data/import` (ficheiros `.json` importados na **primeira** inicialização com BD vazia; se o realm já existir na BD, alterações ao JSON não sobrescrevem automaticamente).
+- **Configuração adicional**: roles, client scopes e clients podem ser ajustados na Admin UI — ver **SETUP-KEYCLOAK-WSO2-SSO.md** § **2**. O JSON em `keycloak/realm/` serve como **referência** e para import inicial.
 - Reset total: `docker compose down -v && docker compose up -d`
 
 ### SSO
@@ -204,7 +204,7 @@ URL: `https://localhost:9443/admin` → Key Managers → **Add Key Manager**
 | Decisão | Motivo |
 |---------|--------|
 | WSO2 usa PostgreSQL (não H2) | H2 é embutido no container — perdido em todo restart/recriação. PostgreSQL persiste no volume `postgres_data` |
-| Keycloak 20.0.5 fixado | Versões mais novas mudam a UI e os caminhos de endpoints |
+| Keycloak 25.0.4 (Docker) | OIDC em `/realms/{realm}/protocol/openid-connect/*` mantém-se; após upgrade da imagem, a BD migra no primeiro arranque |
 | Clientes como `confidential` | Mais seguro; exige `client_secret` em todas as chamadas |
 | Roles do realm como scopes | Protocol mapper mapeia roles → claim `scope` do JWT; WSO2 lê esse claim para validar autorização |
 | Scope Management Endpoint = token endpoint | Campo obrigatório na UI do WSO2 4.5.0; Keycloak não expõe esse endpoint; valor usado apenas para satisfazer validação de formulário |
@@ -212,7 +212,7 @@ URL: `https://localhost:9443/admin` → Key Managers → **Add Key Manager**
 | NÃO usar `wso2-key-manager` em "Provide Existing OAuth Keys" | Esse client é reservado para uso interno do WSO2. Para subscrições, usar `order-processing-api` |
 | OAuth App Creation = OFF + Out of Band Provisioning = ON | Evita que WSO2 tente criar clientes dinamicamente; aceita o client pré-criado `order-processing-api` |
 | Scope `default` vinculado ao `wso2-key-manager` | `AccessTokenGenerator` do WSO2 (`org.wso2.carbon.apimgt.impl`) sempre envia `scope=default` (`OAUTH2_DEFAULT_SCOPE = "default"`). Sem esse vínculo, Keycloak retorna `invalid_scope` |
-| Roles do service account via Admin API | A UI do Keycloak 20.x para Service Account Roles não persiste corretamente via "Assign role". Usar: `POST /admin/realms/{realm}/users/{sa-uuid}/role-mappings/clients/{rm-uuid}` |
+| Roles do service account via Admin API | Se a UI não persistir roles do service account, usar: `POST /admin/realms/{realm}/users/{sa-uuid}/role-mappings/clients/{rm-uuid}` |
 | Protocol mapper para DCR API | O mapper `oidc-usermodel-client-role-mapper` no client `wso2-key-manager` inclui `resource_access.realm-management.roles` no token. Sem ele, token não tem as roles e DCR API retorna `insufficient_scope` |
 
 ---
